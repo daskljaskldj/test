@@ -74,11 +74,11 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "共享协议转换，按具体模型记录验证证据；R1/R2/R4 离线通过，下一实现步骤为 R5",
+    subtitle: "R1/R2/R4/R5 离线通过；下一步核对 evals 契约，再处理 R3 会话/模型签名隔离",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
-        summary: "保留 Argon 与 3.8-flash 的历史探测记录。完成标记仅表示历史覆盖；R5 尚需补强 ID 回放的最终回答断言，不能当成当前模型或全系列完整验收。以下旧版本证据不自动迁移。",
+        summary: "保留 Argon 与 3.8-flash 的历史探测记录。R5 最终回答断言已离线补强，但没有重跑线上探针；完成标记不代表当前模型或全系列完整验收。以下旧版本证据不自动迁移。",
         goal: ["分别验证 functionCall/functionResponse 带 id 与不带 id", "验证不同名与同名并行工具调用", "验证顺序多步工具及多个 functionResponse 的 turn 分组", "把端点差异固化为显式兼容配置"],
         verify: ["每个场景都走真实 ModelHub，而非本地 mock", "保留脱敏后的请求形态、HTTP 状态和响应结论", "结果与现有文档中的旧端点差异对照"],
         acceptance: ["按具体模型、配置版本记录 id 接受规则", "并行同名调用结果不会错配且断言最终回答", "历史请求接受与完整语义验收分开记录"],
@@ -132,7 +132,7 @@ const phases = [
         risks: ["ModelCard 默认 builtin_tools 改变行为"], tags: ["google_search", "server tools"]
       },
       {
-        id: "thinking", title: "Reasoning / Thinking / Signature", priority: "critical",
+        id: "thinking", title: "R3 下一步 · 会话/模型签名隔离", priority: "critical", recommended: true,
         summary: "处理 GenAI thought、thought_signature 与 Messages thinking/redacted_thinking 的对应及保留策略。",
         goal: ["确认 includeThoughts=false 时实际响应", "签名跨轮保留", "CC 压缩后签名回填策略"],
         verify: ["普通 reasoning 多轮", "工具调用夹杂 thinking", "签名缺失/过期/重复"],
@@ -206,12 +206,12 @@ const phases = [
         risks: ["CC 客户端行为随版本变化"], tags: ["count_tokens", "beta", "compatibility"]
       },
       {
-        id: "regression", title: "R5 下一步 · 探针断言与回归矩阵", priority: "critical", recommended: true,
+        id: "regression", title: "R5 · 探针验收（离线通过）", priority: "critical", inProgress: true,
         summary: "共享协议回归加按模型配置矩阵，分别记录 Gemini 卡片的离线结果与真实 smoke；3.8 的 PASS 不自动代表其他模型。",
         goal: ["共享转换纯函数与 HTTP/SSE 契约测试", "至少两套合成模型配置覆盖默认值/覆盖规则与最终 SDK 参数", "按具体模型、配置版本、SDK 来源记录真实 CC smoke"],
         verify: ["字段保真与模型配置差异分别断言", "thinking/token/工具等设置不串用或静默丢失", "限流与权限受限保留待验收，测试不包含真实 AK"],
         acceptance: ["已支持卡片通过对应核心矩阵", "未测卡片不标 PASS，记录能力边界与待验收项"],
-        risks: ["只测 happy path", "真实服务测试不稳定"], evidence: ["2026-10-23：全量 42 项离线回归通过；下一步 R5 补强 ID 回放最终答案与失败退出码，不重跑线上探针"], tags: ["tests", "contract", "smoke"]
+        risks: ["只测 happy path", "真实服务测试不稳定"], evidence: ["2026-10-23：R5 最终回答断言、seed/名称参数配对、Python 入口及 shell 聚合已离线通过", "PASS=0 / FAIL=1 / INCONCLUSIVE=2；FAIL 优先，空 case 不得成功，重复场景去重避免覆盖", "全量 55 tests / OK；没有重跑线上探针，当前模型与 Merlin 验收仍独立待办"], tags: ["tests", "contract", "smoke"]
       },
       {
         id: "observability", title: "日志、指标与安全", priority: "critical",
@@ -236,7 +236,7 @@ const phases = [
         verify: ["至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化", "静态默认值/运行时覆盖与 false/0/缺省值边界", "不支持或冲突设置明确报错，配置及凭据来源可追溯", "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"],
         acceptance: ["切换已支持模型无需修改公共转换函数", "模型设置不串用、不静默丢失，签名会话与模型隔离", "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS", "新环境可复现安装与启动，AK 不写入文件"],
         risks: ["仅替换 URL 不能保证 thinking/token/工具等设置生效", "资源限流不等于能力不支持", "历史成功或一个模型 PASS 不代表全系列验收"],
-        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "R1/R2/R4 离线已修复；系列配置兼容尚未实现，下一实现步骤为 R5", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
+        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "R1/R2/R4/R5 离线已修复；下一步核对 evals 契约再处理 R3，系列配置兼容尚未实现", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
         tags: ["ModelCard", "config", "secrets", "Claude Code settings"]
       },
       {
