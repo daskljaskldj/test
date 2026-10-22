@@ -43,7 +43,7 @@ const phases = [
       },
       {
         id: "real-single", title: "真实 CC 单轮文本", priority: "critical", done: true,
-        summary: "使用本机 Claude Code 2.1.142 完成一次真实端到端文本调用。",
+        summary: "历史验收：gemini-4-argon 时期，真实 Claude Code 完成端到端文本调用；当前模型仍需分别验收。",
         goal: ["排除 curl/自制客户端模拟", "验证 CC 原生 stream 请求", "确认本地 settings 覆盖生效"],
         verify: ["CC 输出指定文本", "调试日志记录 /v1/messages", "服务端返回 200"],
         acceptance: ["退出码 0", "stop_reason=end_turn", "请求和响应均来自真实链路"],
@@ -52,7 +52,7 @@ const phases = [
       },
       {
         id: "real-multiturn", title: "真实 CC 多轮文本", priority: "critical", done: true,
-        summary: "用 --resume 恢复同一 CC session，验证历史由 CC 真实携带。",
+        summary: "历史验收：gemini-4-argon 时期用 --resume 恢复同一 CC session，验证历史由 CC 真实携带；不代表 Gemini 系列均已通过。",
         goal: ["第一轮写入唯一标记", "第二轮不重复标记", "第二轮依靠历史准确回答"],
         verify: ["同一 session_id", "两次 /v1/messages 200", "session 文件角色顺序正确"],
         acceptance: ["user→assistant→user→assistant 完整", "第二轮正确返回 CC-MULTI-6F3A91"],
@@ -61,7 +61,7 @@ const phases = [
       },
       {
         id: "real-vlm", title: "真实 CC 单图 VLM", priority: "critical", done: true,
-        summary: "在 macOS Trae 终端粘贴 PNG，确认 CC 发出 base64 image block 并正确识图。",
+        summary: "历史验收：gemini-4-argon 时期在 Trae 终端粘贴 PNG，确认 CC 发送真实图片并正确识图；其他模型分别验收。",
         goal: ["图片与文本同时进入 Messages", "base64 图片映射为 GenAI inline_data", "答案返回 CC"],
         verify: ["session 中存在 image block", "media_type=image/png", "模型正确数出 3 条日志"],
         acceptance: ["不是路径替代或 OCR 预填", "真实图片数据进入请求且回答正确"],
@@ -74,31 +74,31 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "先锁定当前 Argon 端点的真实规则，再补齐工具、签名与流式语义",
+    subtitle: "共享协议转换，按具体模型记录能力、配置与验证证据；下一实现步骤为 R2",
     nodes: [
       {
-        id: "endpoint-contract", title: "Argon 端点协议兼容性", priority: "critical", inProgress: true, recommended: true,
-        summary: "针对当前 gemini-4-argon 做真实协议探测，确定 id、并行工具、functionResponse 分组和 signature 的实际规则。",
+        id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
+        summary: "保留 Argon 与 3.8-flash 的历史探测记录。完成标记仅表示历史覆盖；R5 尚需补强 ID 回放的最终回答断言，不能当成当前模型或全系列完整验收。以下旧版本证据不自动迁移。",
         goal: ["分别验证 functionCall/functionResponse 带 id 与不带 id", "验证不同名与同名并行工具调用", "验证顺序多步工具及多个 functionResponse 的 turn 分组", "把端点差异固化为显式兼容配置"],
         verify: ["每个场景都走真实 ModelHub，而非本地 mock", "保留脱敏后的请求形态、HTTP 状态和响应结论", "结果与现有文档中的旧端点差异对照"],
-        acceptance: ["明确当前 Argon 对 id 的接受规则", "并行同名调用结果不会错配", "后续代码不再依靠猜测或单次成功判断协议"],
-        risks: ["旧文档描述的端点与当前 Argon 可能不同", "429/502 等瞬时错误不能误判为协议不支持", "测试不得输出 AK"],
+        acceptance: ["按具体模型、配置版本记录 id 接受规则", "并行同名调用结果不会错配且断言最终回答", "历史请求接受与完整语义验收分开记录"],
+        risks: ["旧端点规则不能泛化到整个 Gemini 系列", "资源限流不等于协议不支持", "ID 回放当前缺少最终回答断言，R5 待整改"],
         evidence: ["2026-10-21：真实 seed 请求成功，Argon 返回 functionCall.id 与 thoughtSignature", "首次回放遇到 HTTP 429；有限退避重试后恢复，不将资源错误误判成协议错误", "真实 with_id 回放：PASS", "真实 without_id 回放：PASS", "不同名并行工具：PASS；一次返回 lookup_alpha 与 lookup_beta，两个调用 ID 唯一", "同名并行工具：PASS；两次 lookup_item 仍保持两个唯一调用 ID，结果未错配", "两种并行场景都把两个 functionResponse 放在同一个 GenAI user turn 后成功闭环", "实测两个 functionCall Part 中只有一个携带 thoughtSignature；实现必须按实际存在情况保存，不能假设每个调用都有签名", "新增 3 个并行回归用例；当前 26 个单元测试全部通过", "连续两轮工具真实探针已就绪：强制 step_one→回传→step_two→回传→最终回答，并核验跨轮 ID 与 signature", "探针语法检查及 26 个回归测试通过；当前等待在 Trae 可见终端执行真实请求"],
         tags: ["Argon", "id", "parallel tools", "thoughtSignature"]
       },
       {
-        id: "native-stream", title: "GenAI 原生增量流式", priority: "critical", blocked: true,
-        summary: "当前 ModelHub 卡片未开放 streamGenerateContent；适配层无法单独实现上游原生流式，本期使用显式 buffered_sse。",
-        goal: ["当前交付明确采用 generateContent + 缓冲式 Messages SSE", "保留原生流式解析扩展点", "ModelHub 开放接口后再重新验证"],
-        verify: ["当前 streamGenerateContent 真实请求返回 401 no model permission", "generateContent 正常可用", "Claude Code 能消费适配层输出的合法 SSE 事件"],
-        acceptance: ["本期不把缓冲式 SSE 描述成原生流式", "只有上游返回多个真实 chunk 后才能解除阻塞", "外部能力未开放不计为适配层未完成项"],
+        id: "native-stream", title: "原生增量流式（历史阻塞）", priority: "critical", blocked: true,
+        summary: "阻塞证据仅来自 4-argon 历史权限错误；3.8-flash 原生流尚未核验。按卡片分别验证并显式选择 native 或 buffered_sse，不能把旧阻塞泛化到 Gemini 系列。",
+        goal: ["按模型配置声明 native/buffered 模式", "buffered 模式直接使用 generateContent，避免无说明自动降级", "具备权限和资源后验证对应卡片的原生增量"],
+        verify: ["历史 4-argon 权限错误与其他模型待验收分别记录", "合法 Messages SSE 事件可被 CC 消费", "输出显式模式与实际传输行为一致"],
+        acceptance: ["缓冲 SSE 不描述为原生流式", "每张卡片能力单独确认，未测不宣称不支持", "资源、权限阻塞与适配器实现待办分开记录"],
         risks: ["首 token 必须等待上游完整响应", "长回答的用户可见延迟较高", "上游接口开放时间不由本项目控制"],
         evidence: ["2026-10-21：SDK 调用 streamGenerateContent 返回 401 no model permission: gemini-4-argon", "设计文档的 generate_content_stream 也标记为 Phase 2 未实现", "当前可用方案：generateContent 完成后转换为 Anthropic SSE"],
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "工具定义请求转换", priority: "critical",
-        summary: "把 Messages tools 与 tool_choice 转成 GenAI function declarations 和 functionCallingConfig。",
+        id: "tool-definitions", title: "R2 · 工具定义与 Schema 保真", priority: "critical", recommended: true,
+        summary: "下一实现步骤：修复工具 Schema 联合类型、引用与约束被静默丢失；共享转换逻辑按已确认能力兼容不同 Gemini 卡片。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
@@ -198,7 +198,7 @@ const phases = [
         risks: ["生成请求不天然幂等"], tags: ["retry", "timeout", "idempotency"]
       },
       {
-        id: "compat-probes", title: "CC 辅助接口与版本兼容", priority: "normal",
+        id: "compat-probes", title: "CC 辅助接口与版本兼容", priority: "normal", inProgress: true,
         summary: "处理或明确 HEAD、count_tokens、模型探测及 beta header 等 CC 行为。",
         goal: ["记录 CC 实际请求面", "判断 404 是否无害", "必要时补 count_tokens"],
         verify: ["启动、单轮、交互、工具四类流程抓取", "不同 CC 版本 smoke"],
@@ -207,10 +207,10 @@ const phases = [
       },
       {
         id: "regression", title: "协议回归测试矩阵", priority: "critical",
-        summary: "把已验证场景固化为单测、契约测试和真实 smoke，阻止后续改动破坏已有能力。",
-        goal: ["转换纯函数测试", "HTTP/SSE 契约测试", "真实 CC smoke 清单"],
-        verify: ["CI/本地一键运行", "失败能定位到协议层", "测试不包含真实 AK"],
-        acceptance: ["核心矩阵全部通过才能交付", "关键分支有正反例"],
+        summary: "共享协议回归加按模型配置矩阵，分别记录 Gemini 卡片的离线结果与真实 smoke；3.8 的 PASS 不自动代表其他模型。",
+        goal: ["共享转换纯函数与 HTTP/SSE 契约测试", "至少两套合成模型配置覆盖默认值/覆盖规则与最终 SDK 参数", "按具体模型、配置版本、SDK 来源记录真实 CC smoke"],
+        verify: ["字段保真与模型配置差异分别断言", "thinking/token/工具等设置不串用或静默丢失", "限流与权限受限保留待验收，测试不包含真实 AK"],
+        acceptance: ["已支持卡片通过对应核心矩阵", "未测卡片不标 PASS，记录能力边界与待验收项"],
         risks: ["只测 happy path", "真实服务测试不稳定"], tags: ["tests", "contract", "smoke"]
       },
       {
@@ -226,26 +226,26 @@ const phases = [
   {
     id: "delivery",
     number: "PHASE 04",
-    title: "交付与上线",
-    subtitle: "把代码变成可配置、可观测、可回滚的初版能力",
+    title: "evals 合入与 Merlin 验证",
+    subtitle: "本地验证后通过 Git 合入 evals，再由用户按目标模型配置发任务验收",
     nodes: [
       {
-        id: "configuration", title: "配置与启动方式", priority: "normal",
-        summary: "整理 ModelCard、环境变量、模型映射、证书与启动参数，禁止敏感值进入仓库。",
-        goal: ["开发/测试/线上配置分离", "启动前校验必填项", "模型别名与上游模型显式映射"],
-        verify: ["新环境按说明启动", "缺配置时快速失败", "配置变更可追溯"],
-        acceptance: ["无需改代码即可切换允许项", "AK 不写入文件"],
-        risks: ["配置层级互相覆盖", "旁路探索尚无最终结论，不能提前替换主线方案"],
-        evidence: ["旁路参考：他人正在试验直连 ModelHub 的可行性，示例为 /v1/messages + x-api-key + anthropic-version + x-provider-session-id", "示例响应包含 redacted_thinking 与 text(Pong)，目前只证明该试验的单轮文本请求成功", "对方回复明确为“我先试一下可行性，没事你干就完事了”：主线适配任务继续，不等待也不切换方案", "该结果仅作为未来对照样例；在对方给出可复用结论前，不视为现成生产能力", "本机 Claude Code 2.1.306 支持 ANTHROPIC_BASE_URL、ANTHROPIC_API_KEY、ANTHROPIC_AUTH_TOKEN、ANTHROPIC_CUSTOM_HEADERS", "本机全局 settings 保持现状，不因旁路试验而修改"],
+        id: "configuration", title: "Gemini 系列 ModelCard 配置兼容", priority: "critical", inProgress: true,
+        summary: "3.8-flash 用于当前开发验证；共享转换代码，按具体模型卡片处理 Gemini 系列的设置与能力差异。需求已确认，配置接入和系列验收尚未完成。",
+        goal: ["对齐 evals ModelCard 与运行时参数优先级", "按卡片读取模型、端点、token/采样默认值、thinking、内置工具与函数调用设置", "流式、工具 ID 与签名策略按已验证能力配置，不凭型号猜测", "新模型通过配置与回归接入，凭据只在运行时提供"],
+        verify: ["至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化", "静态默认值/运行时覆盖与 false/0/缺省值边界", "不支持或冲突设置明确报错，配置及凭据来源可追溯", "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"],
+        acceptance: ["切换已支持模型无需修改公共转换函数", "模型设置不串用、不静默丢失，签名会话与模型隔离", "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS", "新环境可复现安装与启动，AK 不写入文件"],
+        risks: ["仅替换 URL 不能保证 thinking/token/工具等设置生效", "资源限流不等于能力不支持", "历史成功或一个模型 PASS 不代表全系列验收"],
+        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "需求与验收规则已记录；系列兼容尚未实现，下一实现步骤仍为 R2", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
         tags: ["ModelCard", "config", "secrets", "Claude Code settings"]
       },
       {
-        id: "staging", title: "测试环境端到端验收", priority: "critical",
-        summary: "在接近线上网络与配置的环境跑完整能力矩阵，而非只在本机通过。",
-        goal: ["文本/VLM/工具/流式", "长上下文与故障", "并发与延迟基线"],
-        verify: ["固定用例与结果归档", "失败分类和修复回归", "无本地专属依赖"],
-        acceptance: ["P0/P1 用例全部通过", "已知限制有清单和兜底"],
-        risks: ["环境差异掩盖问题"], tags: ["staging", "E2E", "acceptance"]
+        id: "staging", title: "Merlin 任务验收", priority: "critical",
+        summary: "evals 合入后由用户在 Merlin 发起任务，按具体模型与配置核对实际运行结果。",
+        goal: ["固定代码 commit、SDK 来源与 ModelCard", "覆盖文本/多轮/VLM/工具/流式相关任务", "按模型归档结果与未覆盖项"],
+        verify: ["用户发起 smoke/正式任务", "记录任务链接、commit、模型配置与结果", "失败分类与定向回归，资源阻塞单列"],
+        acceptance: ["目标任务环境可复现", "已支持卡片的相关任务达到约定可用门槛"],
+        risks: ["本地 PASS 不替代 Merlin 验收", "Mac editable 目录不代表任务环境可安装"], tags: ["Merlin", "evals", "E2E", "acceptance"]
       },
       {
         id: "accuracy", title: "真实任务与准确率验证", priority: "critical",
@@ -257,19 +257,19 @@ const phases = [
       },
       {
         id: "load", title: "性能与容量", priority: "normal",
-        summary: "测量 TTFT、总延迟、并发、错误率和资源占用，确定安全运行参数。",
+        summary: "按 evals 实际运行需要记录目标模型的延迟、并发与错误率，区分适配器开销和上游资源限制。",
         goal: ["单请求基线", "并发梯度", "长流式连接与资源回收"],
         verify: ["P50/P95 延迟", "不同并发错误率", "连接中断无泄漏"],
         acceptance: ["容量边界明确", "超限时可快速失败或排队"],
         risks: ["上游限流与本地瓶颈混淆"], tags: ["performance", "concurrency", "TTFT"]
       },
       {
-        id: "gray-release", title: "灰度上线与回滚", priority: "critical",
-        summary: "小流量上线，保留快速切回旧链路的能力，并观察真实错误和质量。",
-        goal: ["灰度范围和持续时间", "关键指标阈值", "一键回滚路径"],
-        verify: ["灰度前演练回滚", "线上 smoke", "指标与日志可见"],
-        acceptance: ["异常可在约定时间内回退", "无大面积 oncall 风险"],
-        risks: ["无回滚就扩大流量"], tags: ["release", "rollback", "gray"]
+        id: "gray-release", title: "Git 合入与版本回退", priority: "critical",
+        summary: "把可审查改动合入正式 evals 仓库，记录准确版本，再由用户发起 Merlin 验证。",
+        goal: ["核对实际注册与调用契约", "功能分支/MR 与依赖可复现", "记录 commit 与可回退版本"],
+        verify: ["正式 checkout 的目标检查通过", "MR 展示核心改动与验证范围", "任务配置使用准确 commit"],
+        acceptance: ["转换模块与 evals 契约对齐", "异常能定位并回退代码/配置版本"],
+        risks: ["参考导出目录不是可推送 checkout", "已有 GenAIProvider 不能直接被 Messages 转换器替换"], tags: ["Git", "evals", "MR", "rollback"]
       },
       {
         id: "runbook", title: "Runbook 与已知限制", priority: "normal",
