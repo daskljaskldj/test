@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "共享协议转换，按具体模型记录能力、配置与验证证据；下一实现步骤为 R2",
+    subtitle: "共享协议转换，按具体模型记录验证证据；R2 离线通过，下一实现步骤为 R4",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,13 +97,13 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2 · 工具定义与 Schema 保真", priority: "critical", recommended: true,
-        summary: "下一实现步骤：修复工具 Schema 联合类型、引用与约束被静默丢失；共享转换逻辑按已确认能力兼容不同 Gemini 卡片。",
+        id: "tool-definitions", title: "R2 · Schema 保真（离线通过）", priority: "critical", inProgress: true,
+        summary: "R2 已完成本地修复：基础 Schema 保留现有 SDK 路径，复杂 Schema 原样传递联合、引用与约束；37 项离线回归通过。目标模型接受复杂 Schema 的在线验证尚待完成。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
         risks: ["两种协议 JSON Schema 支持范围不同"],
-        evidence: ["基础工具定义与 tool_choice 转换已经实现并有单测", "仍需真实复杂 schema 与当前端点兼容性验证"], tags: ["tools", "schema", "function calling"]
+        evidence: ["2026-10-22：已移除缩窄联合/静默删字段的清洗逻辑；复杂 Schema 走 parameters_json_schema", "真实 SDK + MockTransport 验证同步/流式最终 HTTP 请求，保留引用、约束、false、null 与混合枚举", "非字符串/空枚举避免 SDK 普通 Schema 的重新解释；非法 JSON 明确报错并隔离输入可变值", "全量离线回归 37 tests / OK；当前卡片及其他 Gemini 卡片在线接受情况待验证，节点不标完成"], tags: ["tools", "schema", "function calling"]
       },
       {
         id: "tool-use-response", title: "functionCall → tool_use", priority: "critical",
@@ -149,13 +149,13 @@ const phases = [
         risks: ["上下文体积快速增长"], tags: ["VLM", "multi-image", "multi-turn"]
       },
       {
-        id: "response-semantics", title: "Stop / Usage / Error 完整映射", priority: "critical", inProgress: true,
-        summary: "R1 已修复 SDK FinishReason 枚举误映射；继续覆盖其他结束原因、用量字段、可重试与不可重试错误。",
+        id: "response-semantics", title: "R4 下一步 · 响应与异常脱敏", priority: "critical", inProgress: true, recommended: true,
+        summary: "R1 已修复结束原因误映射；下一步处理 R4：完整异常链与 HTTPError 脱敏，继续覆盖结束原因、用量与错误语义。",
         goal: ["end_turn/max_tokens/tool_use/stop_sequence", "input/output/cache token 策略", "4xx/5xx/error event 映射"],
         verify: ["每个 stop reason 契约测试", "超时、过载、资源耗尽", "客户端显示可理解"],
         acceptance: ["不把错误伪装成正常回答", "usage 字段稳定且有来源"],
         risks: ["上游错误文案不稳定", "重试造成重复请求"],
-        evidence: ["真实 SDK 非流式/流式 MAX_TOKENS 均映射为 max_tokens", "SDK STOP 保持 end_turn", "全量离线回归 31 tests / OK；R4 与其他响应语义仍待处理"], tags: ["errors", "usage", "finishReason"]
+        evidence: ["真实 SDK 非流式/流式 MAX_TOKENS 均映射为 max_tokens", "SDK STOP 保持 end_turn；R1 当时 31 tests / OK，R2 后全量 37 tests / OK", "下一实现为 R4：异常链/HTTPError 脱敏仍待处理"], tags: ["errors", "usage", "finishReason"]
       }
     ]
   },
@@ -236,7 +236,7 @@ const phases = [
         verify: ["至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化", "静态默认值/运行时覆盖与 false/0/缺省值边界", "不支持或冲突设置明确报错，配置及凭据来源可追溯", "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"],
         acceptance: ["切换已支持模型无需修改公共转换函数", "模型设置不串用、不静默丢失，签名会话与模型隔离", "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS", "新环境可复现安装与启动，AK 不写入文件"],
         risks: ["仅替换 URL 不能保证 thinking/token/工具等设置生效", "资源限流不等于能力不支持", "历史成功或一个模型 PASS 不代表全系列验收"],
-        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "需求与验收规则已记录；系列兼容尚未实现，下一实现步骤仍为 R2", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
+        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "R2 离线已修复；系列配置兼容尚未实现，下一实现步骤为 R4", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
         tags: ["ModelCard", "config", "secrets", "Claude Code settings"]
       },
       {
