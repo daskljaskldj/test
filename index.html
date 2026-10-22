@@ -29,8 +29,9 @@
     <section class="hero" aria-labelledby="overview-title">
       <div class="hero-copy">
         <p class="kicker">CLAUDE CODE → MESSAGES → GENAI SDK → MODELHUB</p>
-        <h2 id="overview-title">从“能跑通”到“可上线”的完整任务地图</h2>
+        <h2 id="overview-title">Gemini 系列协议适配与交付任务地图</h2>
         <p class="hero-description">每个节点都包含实现范围、验证方式、完成标准、风险和证据。项目每完成一个小步骤，就同步更新这里的状态与验证证据。</p>
+        <p class="hero-description">兼容目标为 Gemini 系列，当前以 gemini-3.8-flash 开发验证。模型差异通过各自 ModelCard 与能力配置处理，逐卡片验证；交付路径为本地验证 → Git 合入 evals → 用户 Merlin 验收。系列配置兼容尚待实现。</p>
         <div class="legend" aria-label="状态说明">
           <span><i class="dot done"></i>已完成</span>
           <span><i class="dot active"></i>正在进行</span>
@@ -41,7 +42,7 @@
 
       <div class="progress-card">
         <div class="progress-head">
-          <span>总体进度</span>
+          <span>历史节点进度 · 非模型/Merlin 验收率</span>
           <strong id="progressPercent">0%</strong>
         </div>
         <div class="progress-track"><span id="progressFill"></span></div>
@@ -85,6 +86,6 @@
     <span>执行规则：代码、测试、网页状态同步更新 · 最后更新：2026-10-22</span>
   </footer>
 
-  <script src="./app.js"></script>
+  <script src="./app.js?v=gemini-family-20261022"></script>
 </body>
 </html>
