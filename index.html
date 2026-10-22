@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Claude Code Messages 与 Google GenAI / ModelHub 协议适配任务路线图" />
+  <title>CC × GenAI 适配任务路线图</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">CG</span>
+      <div>
+        <p class="eyebrow">ADAPTER MISSION CONTROL</p>
+        <h1>CC × GenAI 适配路线图</h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="ghost-button" id="resetButton" type="button">重置进度</button>
+      <button class="primary-button" id="nextButton" type="button">定位下一节点</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="overview-title">
+      <div class="hero-copy">
+        <p class="kicker">CLAUDE CODE → MESSAGES → GENAI SDK → MODELHUB</p>
+        <h2 id="overview-title">从“能跑通”到“可上线”的完整任务地图</h2>
+        <p class="hero-description">每个节点都包含实现范围、验证方式、完成标准、风险和证据。项目每完成一个小步骤，就同步更新这里的状态与验证证据。</p>
+        <div class="legend" aria-label="状态说明">
+          <span><i class="dot done"></i>已完成</span>
+          <span><i class="dot active"></i>正在进行</span>
+          <span><i class="dot blocked"></i>无法解决</span>
+          <span><i class="dot pending"></i>待处理</span>
+        </div>
+      </div>
+
+      <div class="progress-card">
+        <div class="progress-head">
+          <span>总体进度</span>
+          <strong id="progressPercent">0%</strong>
+        </div>
+        <div class="progress-track"><span id="progressFill"></span></div>
+        <div class="progress-stats">
+          <div><strong id="doneCount">0</strong><span>已点亮</span></div>
+          <div><strong id="remainingCount">0</strong><span>待完成</span></div>
+          <div><strong id="totalCount">0</strong><span>总节点</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="任务筛选">
+      <div class="filters" id="filters">
+        <button class="filter active" data-filter="all" type="button">全部</button>
+        <button class="filter" data-filter="done" type="button">已完成</button>
+        <button class="filter" data-filter="pending" type="button">待处理</button>
+        <button class="filter" data-filter="blocked" type="button">无法解决</button>
+        <button class="filter" data-filter="critical" type="button">关键路径</button>
+      </div>
+      <label class="search-box">
+        <span>⌕</span>
+        <input id="searchInput" type="search" placeholder="搜索节点、协议或验证项" />
+      </label>
+    </section>
+
+    <section class="workspace">
+      <div class="roadmap" id="roadmap" aria-label="任务节点路线图"></div>
+
+      <aside class="detail-panel" id="detailPanel" aria-live="polite">
+        <div class="detail-empty">
+          <span class="empty-icon">↗</span>
+          <h3>选择一个节点</h3>
+          <p>查看目标、实现内容、验证方式、完成标准和风险。</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer>
+    <span>进度保存在浏览器 localStorage</span>
+    <span>执行规则：代码、测试、网页状态同步更新 · 最后更新：2026-10-22</span>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
