@@ -82,7 +82,7 @@ const phases = [
         goal: ["分别验证 functionCall/functionResponse 带 id 与不带 id", "验证不同名与同名并行工具调用", "验证顺序多步工具及多个 functionResponse 的 turn 分组", "把端点差异固化为显式兼容配置"],
         verify: ["每个场景都走真实 ModelHub，而非本地 mock", "保留脱敏后的请求形态、HTTP 状态和响应结论", "结果与现有文档中的旧端点差异对照"],
         acceptance: ["按具体模型、配置版本记录 id 接受规则", "并行同名调用结果不会错配且断言最终回答", "历史请求接受与完整语义验收分开记录"],
-        risks: ["旧端点规则不能泛化到整个 Gemini 系列", "资源限流不等于协议不支持", "ID 回放当前缺少最终回答断言，R5 待整改"],
+        risks: ["旧端点规则不能泛化到整个 Gemini 系列", "资源限流不等于协议不支持", "R5 新断言已离线通过，但尚无目标模型的线上新验收"],
         evidence: ["2026-10-21：真实 seed 请求成功，Argon 返回 functionCall.id 与 thoughtSignature", "首次回放遇到 HTTP 429；有限退避重试后恢复，不将资源错误误判成协议错误", "真实 with_id 回放：PASS", "真实 without_id 回放：PASS", "不同名并行工具：PASS；一次返回 lookup_alpha 与 lookup_beta，两个调用 ID 唯一", "同名并行工具：PASS；两次 lookup_item 仍保持两个唯一调用 ID，结果未错配", "两种并行场景都把两个 functionResponse 放在同一个 GenAI user turn 后成功闭环", "实测两个 functionCall Part 中只有一个携带 thoughtSignature；实现必须按实际存在情况保存，不能假设每个调用都有签名", "新增 3 个并行回归用例；当前 26 个单元测试全部通过", "连续两轮工具真实探针已就绪：强制 step_one→回传→step_two→回传→最终回答，并核验跨轮 ID 与 signature", "探针语法检查及 26 个回归测试通过；当前等待在 Trae 可见终端执行真实请求"],
         tags: ["Argon", "id", "parallel tools", "thoughtSignature"]
       },
