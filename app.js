@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "共享协议转换，按具体模型记录验证证据；R2 离线通过，下一实现步骤为 R4",
+    subtitle: "共享协议转换，按具体模型记录验证证据；R1/R2/R4 离线通过，下一实现步骤为 R5",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -149,13 +149,13 @@ const phases = [
         risks: ["上下文体积快速增长"], tags: ["VLM", "multi-image", "multi-turn"]
       },
       {
-        id: "response-semantics", title: "R4 下一步 · 响应与异常脱敏", priority: "critical", inProgress: true, recommended: true,
-        summary: "R1 已修复结束原因误映射；下一步处理 R4：完整异常链与 HTTPError 脱敏，继续覆盖结束原因、用量与错误语义。",
+        id: "response-semantics", title: "R1 / R4 · 响应与异常链（离线通过）", priority: "critical", inProgress: true,
+        summary: "R1 结束原因及 R4 异常链脱敏已离线修复，全量 42 项通过。HTTP 状态码和固定诊断类别保留，原始异常、响应正文与 URL 不外传；其余响应语义仍待验收。",
         goal: ["end_turn/max_tokens/tool_use/stop_sequence", "input/output/cache token 策略", "4xx/5xx/error event 映射"],
         verify: ["每个 stop reason 契约测试", "超时、过载、资源耗尽", "客户端显示可理解"],
         acceptance: ["不把错误伪装成正常回答", "usage 字段稳定且有来源"],
         risks: ["上游错误文案不稳定", "重试造成重复请求"],
-        evidence: ["真实 SDK 非流式/流式 MAX_TOKENS 均映射为 max_tokens", "SDK STOP 保持 end_turn；R1 当时 31 tests / OK，R2 后全量 37 tests / OK", "下一实现为 R4：异常链/HTTPError 脱敏仍待处理"], tags: ["errors", "usage", "finishReason"]
+        evidence: ["真实 SDK 非流式/流式 MAX_TOKENS 均映射为 max_tokens；STOP 保持 end_turn", "2026-10-23：R4 覆盖 APIError、HTTPError、缺失 message、SDK 异常响应、流中断及 fallback 失败", "标准 traceback 与异常日志不含合成敏感标记，安全异常无原始 cause/context；全量 42 tests / OK", "边界：不覆盖主动抓取 frame locals 或独立 HTTP 调试日志；未新增模型调用"], tags: ["errors", "usage", "finishReason"]
       }
     ]
   },
@@ -206,12 +206,12 @@ const phases = [
         risks: ["CC 客户端行为随版本变化"], tags: ["count_tokens", "beta", "compatibility"]
       },
       {
-        id: "regression", title: "协议回归测试矩阵", priority: "critical",
+        id: "regression", title: "R5 下一步 · 探针断言与回归矩阵", priority: "critical", recommended: true,
         summary: "共享协议回归加按模型配置矩阵，分别记录 Gemini 卡片的离线结果与真实 smoke；3.8 的 PASS 不自动代表其他模型。",
         goal: ["共享转换纯函数与 HTTP/SSE 契约测试", "至少两套合成模型配置覆盖默认值/覆盖规则与最终 SDK 参数", "按具体模型、配置版本、SDK 来源记录真实 CC smoke"],
         verify: ["字段保真与模型配置差异分别断言", "thinking/token/工具等设置不串用或静默丢失", "限流与权限受限保留待验收，测试不包含真实 AK"],
         acceptance: ["已支持卡片通过对应核心矩阵", "未测卡片不标 PASS，记录能力边界与待验收项"],
-        risks: ["只测 happy path", "真实服务测试不稳定"], tags: ["tests", "contract", "smoke"]
+        risks: ["只测 happy path", "真实服务测试不稳定"], evidence: ["2026-10-23：全量 42 项离线回归通过；下一步 R5 补强 ID 回放最终答案与失败退出码，不重跑线上探针"], tags: ["tests", "contract", "smoke"]
       },
       {
         id: "observability", title: "日志、指标与安全", priority: "critical",
@@ -219,7 +219,7 @@ const phases = [
         goal: ["request id 和阶段耗时", "状态码/重试/stop reason 指标", "内容类型与数量而非敏感正文"],
         verify: ["成功与失败链路均可追踪", "日志扫描无 AK/base64", "并发请求可区分"],
         acceptance: ["问题能在日志中定位阶段", "敏感数据不落盘"],
-        risks: ["为了排障过度记录用户内容"], tags: ["logging", "metrics", "redaction"]
+        risks: ["为了排障过度记录用户内容"], evidence: ["2026-10-23：R4 标准异常链/日志脱敏离线通过；整体链路指标和日志安全验收仍待完成"], tags: ["logging", "metrics", "redaction"]
       }
     ]
   },
@@ -236,7 +236,7 @@ const phases = [
         verify: ["至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化", "静态默认值/运行时覆盖与 false/0/缺省值边界", "不支持或冲突设置明确报错，配置及凭据来源可追溯", "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"],
         acceptance: ["切换已支持模型无需修改公共转换函数", "模型设置不串用、不静默丢失，签名会话与模型隔离", "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS", "新环境可复现安装与启动，AK 不写入文件"],
         risks: ["仅替换 URL 不能保证 thinking/token/工具等设置生效", "资源限流不等于能力不支持", "历史成功或一个模型 PASS 不代表全系列验收"],
-        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "R2 离线已修复；系列配置兼容尚未实现，下一实现步骤为 R4", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
+        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "R1/R2/R4 离线已修复；系列配置兼容尚未实现，下一实现步骤为 R5", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
         tags: ["ModelCard", "config", "secrets", "Claude Code settings"]
       },
       {
