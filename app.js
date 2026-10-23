@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "最小文本请求同样401：先定位鉴权，不继续盲跑复杂Schema；66项离线回归通过不代表线上通过",
+    subtitle: "配置对照：3.8模型/URL未混入4，但完整ModelCard未加载；先对齐配置及鉴权契约，401根因未定",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -98,7 +98,7 @@ const phases = [
       },
       {
         id: "tool-definitions", title: "R2 · 最小文本也返回401，鉴权待定位", priority: "critical", inProgress: true, recommended: true,
-        summary: "STEP-043：不带工具/图片的3.8-flash最小文本真实请求仍401，auth=rejected、exit2，已停止，未继续复杂Schema。输入无空白/控制字符，未检测到Google凭据或常见代理环境变量非空；URL匹配、AK来源已确认。不据此认定AK失效或模型不支持。新增5项离线护栏，全量66项通过；下一步对照可用调用的鉴权契约/服务端记录，R2保持未验收。",
+        summary: "最小文本真实请求401后已停止。STEP-044离线捕获原探针最终SDK请求：模型/URL确为3.8，未混入4；但完整ModelCard未加载，实际2048输出上限/temperature=0，没有卡片thinking/toolConfig/google_search。卡片上限为65536。差异是否导致401尚无证据，先对齐框架配置和鉴权，不要求换AK；66项离线通过不等于R2线上验收。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
