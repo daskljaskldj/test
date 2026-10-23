@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "本地ModelCard对齐及SDK兼容已离线验证：73项通过；终端启动被本地输入校验拦截，未请求模型",
+    subtitle: "已按用户ModelCard真实请求：仍HTTP401，鉴权根因待定位；73项离线通过不等于线上验收",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2前置 · 按ModelCard文本实测待启动", priority: "critical", inProgress: true, recommended: true,
-        summary: "STEP-045：本地按用户卡片构造65536/high/false/AUTO/google_search，无2048或额外temperature覆盖。修正SDK thinking内层别名及流式ak/alt查询兼容，73项离线通过。Trae控制不同步，启动尝试被本地空白/控制字符校验拦截，auth=not_attempted/exit1；不是服务端401，也未判定用户AK无效。已停止UI重试，等待前台确认后再启动真实验证，R2仍未验收。",
+        id: "tool-definitions", title: "R2前置 · 按ModelCard实测仍401", priority: "critical", inProgress: true, recommended: true,
+        summary: "STEP-046：Trae前台恢复，目视新隐藏输入与AK已接收门控，用户通知后请求。按用户卡片65536/high/false/AUTO/google_search，无2048/temp0覆盖，仍HTTP401/auth=rejected/exit2；已停止，不继续R2或重复输入。73项离线通过不代表鉴权成功，旧配置缺失不能充分解释本次401；不认定AK无效。下一步核对当前入口完整鉴权契约/服务端记录。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
