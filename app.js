@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "R1/R2/R4/R5 离线通过；下一步核对 evals 契约，再处理 R3 会话/模型签名隔离",
+    subtitle: "优先 R2 3.8-flash 复杂 Schema 真实闭环：探针已就绪、等待隐藏输入；R3 与 evals 接入后续推进",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2 · Schema 保真（离线通过）", priority: "critical", inProgress: true,
-        summary: "R2 已完成本地修复：基础 Schema 保留现有 SDK 路径，复杂 Schema 原样传递联合、引用与约束；37 项离线回归通过。目标模型接受复杂 Schema 的在线验证尚待完成。",
+        id: "tool-definitions", title: "R2 · 复杂 Schema 真实验证（待 AK）", priority: "critical", inProgress: true, recommended: true,
+        summary: "离线保真已通过。3.8-flash 联合/引用/约束三组真实双轮探针已准备，Trae 可见终端等待隐藏输入及通知后继续；未发出请求。新探针护栏通过，当前全量61项离线通过，不能标线上PASS。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
@@ -132,7 +132,7 @@ const phases = [
         risks: ["ModelCard 默认 builtin_tools 改变行为"], tags: ["google_search", "server tools"]
       },
       {
-        id: "thinking", title: "R3 下一步 · 会话/模型签名隔离", priority: "critical", recommended: true,
+        id: "thinking", title: "R3 后续 · 会话/模型签名隔离", priority: "critical",
         summary: "处理 GenAI thought、thought_signature 与 Messages thinking/redacted_thinking 的对应及保留策略。",
         goal: ["确认 includeThoughts=false 时实际响应", "签名跨轮保留", "CC 压缩后签名回填策略"],
         verify: ["普通 reasoning 多轮", "工具调用夹杂 thinking", "签名缺失/过期/重复"],
@@ -231,7 +231,7 @@ const phases = [
     nodes: [
       {
         id: "configuration", title: "Gemini 系列 ModelCard 配置兼容", priority: "critical", inProgress: true,
-        summary: "3.8-flash 用于当前开发验证；共享转换代码，按具体模型卡片处理 Gemini 系列的设置与能力差异。需求已确认，配置接入和系列验收尚未完成。",
+        summary: "正式evals/Merlin由框架解析ModelCard中的模型、URL/base_url、AK和生成设置，再交给适配模块；不在任务中手动输入AK。当前getpass只为本地探针，正式接入与系列验收尚未完成。",
         goal: ["对齐 evals ModelCard 与运行时参数优先级", "按卡片读取模型、端点、token/采样默认值、thinking、内置工具与函数调用设置", "流式、工具 ID 与签名策略按已验证能力配置，不凭型号猜测", "新模型通过配置与回归接入，凭据只在运行时提供"],
         verify: ["至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化", "静态默认值/运行时覆盖与 false/0/缺省值边界", "不支持或冲突设置明确报错，配置及凭据来源可追溯", "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"],
         acceptance: ["切换已支持模型无需修改公共转换函数", "模型设置不串用、不静默丢失，签名会话与模型隔离", "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS", "新环境可复现安装与启动，AK 不写入文件"],
@@ -253,7 +253,7 @@ const phases = [
         goal: ["代码理解/修改/测试任务", "多轮与压缩任务", "失败案例人工归因"],
         verify: ["与直接基线对照", "协议丢失导致的质量问题单列", "重复运行观察稳定性"],
         acceptance: ["达到约定可用门槛", "无系统性字段丢失"],
-        risks: ["只看 HTTP 成功率会掩盖准确率问题"], tags: ["accuracy", "real tasks", "evaluation"]
+        risks: ["只看 HTTP 成功率会掩盖准确率问题"], evidence: ["用户建议 PayerBench、MM-ToolSandBox 少量验证文本多轮与多模态；先各1个短case检查路由，跑通后再扩到3–5例", "本地发现PaperBench Detail候选，是否对应PayerBench待确认；MM-ToolSandBox入口未定位。需确认collection/exercise且模型请求实际经过适配器，尚未提交或运行Merlin任务"], tags: ["accuracy", "real tasks", "evaluation"]
       },
       {
         id: "load", title: "性能与容量", priority: "normal",
