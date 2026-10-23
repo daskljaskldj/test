@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "配置对照：3.8模型/URL未混入4，但完整ModelCard未加载；先对齐配置及鉴权契约，401根因未定",
+    subtitle: "本地ModelCard对齐及SDK兼容已离线验证：73项通过；真实验证待Trae前台恢复，尚未请求模型",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2 · 最小文本也返回401，鉴权待定位", priority: "critical", inProgress: true, recommended: true,
-        summary: "最小文本真实请求401后已停止。STEP-044离线捕获原探针最终SDK请求：模型/URL确为3.8，未混入4；但完整ModelCard未加载，实际2048输出上限/temperature=0，没有卡片thinking/toolConfig/google_search。卡片上限为65536。差异是否导致401尚无证据，先对齐框架配置和鉴权，不要求换AK；66项离线通过不等于R2线上验收。",
+        id: "tool-definitions", title: "R2前置 · 按ModelCard文本实测待启动", priority: "critical", inProgress: true, recommended: true,
+        summary: "STEP-045：本地按用户卡片构造65536/high/false/AUTO/google_search，无2048或额外temperature覆盖；实际SDK普通/流式请求均离线核对。修正thinking内层别名及流式ak/alt查询兼容，全量73项通过。Trae自动输入未执行，等待窗口前台恢复；还没有新的AK提示或真实请求。先验证按卡片文本鉴权，再继续复杂Schema；旧非流式401根因仍未确认。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
@@ -231,12 +231,12 @@ const phases = [
     nodes: [
       {
         id: "configuration", title: "Gemini 系列 ModelCard 配置兼容", priority: "critical", inProgress: true,
-        summary: "正式evals/Merlin由框架解析ModelCard中的模型、URL/base_url、AK和生成设置，再交给适配模块；不在任务中手动输入AK。当前getpass只为本地探针，正式接入与系列验收尚未完成。",
+        summary: "本地新增ModelCardProfile内存注入入口与无AK示例卡；已验证3.8卡片最终参数、两模型配置隔离和运行时覆盖。未知字段/未实现签名裁剪明确拒绝，extension和重试关键词仅作元数据。正式evals/Merlin仍需框架父类/注册接入，不在任务中getpass；73项离线通过不是系列在线验收。",
         goal: ["对齐 evals ModelCard 与运行时参数优先级", "按卡片读取模型、端点、token/采样默认值、thinking、内置工具与函数调用设置", "流式、工具 ID 与签名策略按已验证能力配置，不凭型号猜测", "新模型通过配置与回归接入，凭据只在运行时提供"],
         verify: ["至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化", "静态默认值/运行时覆盖与 false/0/缺省值边界", "不支持或冲突设置明确报错，配置及凭据来源可追溯", "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"],
         acceptance: ["切换已支持模型无需修改公共转换函数", "模型设置不串用、不静默丢失，签名会话与模型隔离", "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS", "新环境可复现安装与启动，AK 不写入文件"],
         risks: ["仅替换 URL 不能保证 thinking/token/工具等设置生效", "资源限流不等于能力不支持", "历史成功或一个模型 PASS 不代表全系列验收"],
-        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "当前 target.py 仅固定 MODEL/URL，尚未解析 ModelCard 或合并 thinking / builtin_tools 默认配置", "R1/R2/R4/R5 离线已修复；下一步核对 evals 契约再处理 R3，系列配置兼容尚未实现", "evals 参考配置采用静态 generationConfig 默认值与运行时解析值覆盖，接入时需核对实际 SDK 契约", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局 Claude Code settings 保持现状，凭据仅运行时提供"],
+        evidence: ["2026-10-22：用户确认上线兼容目标为 Gemini 系列，3.8-flash 是当前开发验证模型", "2026-10-23 STEP-045：本地ModelCardProfile加载默认参数，核心支持内存AK，CLI禁止含AK文件；旧控制探针/服务仍使用target.py", "新增7项回归：两模型配置隔离、覆盖、未知设置拒绝、实际SDK普通/流式最终请求，当前全量73项通过", "修正当前editable SDK thinking内层别名与流式ak/alt查询兼容；未确认旧非流式401根因，SDK来源仍须固化", "正式evals父类/注册及R3待核对，不能将本地映射称为全系列在线通过", "历史旁路直连试验仅作参考，不改变主线转换任务", "本机全局Claude Code settings保持现状，凭据仅运行时提供"],
         tags: ["ModelCard", "config", "secrets", "Claude Code settings"]
       },
       {
