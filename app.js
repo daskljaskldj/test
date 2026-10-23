@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "优先 R2 3.8-flash 复杂 Schema 真实闭环：探针已就绪、等待隐藏输入；R3 与 evals 接入后续推进",
+    subtitle: "R2 真实请求首跳401；URL已匹配、AK来源已确认，鉴权原因待定位；不代表Schema不支持",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2 · 复杂 Schema 真实验证（待 AK）", priority: "critical", inProgress: true, recommended: true,
-        summary: "离线保真已通过。3.8-flash 联合/引用/约束三组真实双轮探针已准备，Trae 可见终端等待隐藏输入及通知后继续；未发出请求。新探针护栏通过，当前全量61项离线通过，不能标线上PASS。",
+        id: "tool-definitions", title: "R2 · 真实验证首跳 401（鉴权待核对）", priority: "critical", inProgress: true, recommended: true,
+        summary: "3.8-flash首个union场景返回401，INCONCLUSIVE退出，后两组未运行，Schema与工具闭环未验收。ModelCard URL已匹配，用户确认AK来自该卡且也用于Gemini 4；合成凭据离线验证SDK完整端点和ak保留（含无Google API Key路径）。真实鉴权原因仍待定位，不要求换AK、不据401认定AK过期。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
