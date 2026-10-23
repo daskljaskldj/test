@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "已按用户ModelCard真实请求：仍HTTP401，鉴权根因待定位；73项离线通过不等于线上验收",
+    subtitle: "已追踪参考框架鉴权分支；最终配置与401根因待核实，本步无模型请求、不再索取AK",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2前置 · 按ModelCard实测仍401", priority: "critical", inProgress: true, recommended: true,
-        summary: "STEP-046：Trae前台恢复，目视新隐藏输入与AK已接收门控，用户通知后请求。按用户卡片65536/high/false/AUTO/google_search，无2048/temp0覆盖，仍HTTP401/auth=rejected/exit2；已停止，不继续R2或重复输入。73项离线通过不代表鉴权成功，旧配置缺失不能充分解释本次401；不认定AK无效。下一步核对当前入口完整鉴权契约/服务端记录。",
+        id: "tool-definitions", title: "R2前置 · 鉴权契约已追踪，401待定位", priority: "critical", inProgress: true, recommended: true,
+        summary: "STEP-047：只读核对参考框架4.13.2的实际父类与调用链，确认鉴权有显式配置分支；本地尚未完整复用框架请求头与最终配置契约。用户提供片段未显示分支开关，任务最终合并配置待核实，不能认定卡片缺字段或请求头差异就是401根因。本步未请求模型、未索取AK、未改传输代码；最近线上仍为STEP-046的401，R2工具验收继续待定。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
