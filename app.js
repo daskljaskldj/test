@@ -3,12 +3,12 @@ const mission = {
     "title": "CC × GenAI 适配路线图",
     "subtitle": "本地协议适配 → 本地验证 → 合入 evals → Merlin 任务验证",
     "updated": "2026-10-23",
-    "revision": "task-map-20261023",
+    "revision": "round2-dispatch-20261023",
     "totalNodes": 15,
     "phases": 4,
     "currentModel": "gemini-3.8-flash",
     "offlineTests": 140,
-    "nextWork": "本轮已收尾 · 下一轮尚未派工"
+    "nextWork": "第二轮：签名历史 · 流式结束 · 多模态回归"
   },
   "constraints": [
     {
@@ -18,8 +18,8 @@ const mission = {
     },
     {
       "level": "note",
-      "title": "B / C 本轮已完成 · 主窗口离线验收通过",
-      "text": "签名TTL/清理及显式buffered/native模式已实现；主窗口补调用方与组合路由验证，全量140项离线通过。R3整体、当前模型真实CC和Merlin仍未验收，旧106基线保留在历史中。"
+      "title": "第二轮已安排 · 新结果待主窗口验收",
+      "text": "B补签名历史，C补流式结束，主窗口补多模态矩阵并做接线验收。上一轮140项已通过，本轮不得提前计入；第一阶段尚未整体完成。"
     },
     {
       "level": "note",
@@ -28,31 +28,31 @@ const mission = {
     }
   ],
   "execution": {
-    "title": "本轮派工，对应网页哪一步？",
-    "note": "当前仍在第01阶段「本地协议适配」。开发时同步做离线回归，不代表第01阶段已完成，也不代表整个第02阶段已验收。",
-    "state": "B、C本轮已交付并停止；主窗口验收完成。下一轮尚未派工。",
+    "title": "第二轮分工 · 为18:00进度同步准备",
+    "roundLabel": "第二轮执行中",
+    "note": "仍在第01阶段「本地协议适配」。本轮先补签名历史、流式结束及多模态离线覆盖；只有主窗口验收后才更新通过结果。",
+    "state": "B、C第二轮均已启动；主窗口准备多模态专项及最终接线验收。原140项是上一轮已验收基线，本轮尚未增加通过数。",
     "rule": "网页节点是唯一任务入口：先登记父节点、子项、负责人和验收条件，再派工。子项完成标子项；父节点全部满足完成标准才点亮。",
     "cards": [
       {
         "owner": "转换B",
         "nodeId": "signature",
         "taskIds": [
-          "signature-lifecycle"
+          "signature-history"
         ]
       },
       {
         "owner": "转换C",
         "nodeId": "streaming",
         "taskIds": [
-          "stream-mode",
-          "stream-failure"
+          "stream-termination"
         ]
       },
       {
         "owner": "主窗口",
-        "nodeId": "offline-regression",
+        "nodeId": "multimodal",
         "taskIds": [
-          "offline-bc"
+          "multimodal-matrix"
         ]
       }
     ]
@@ -227,7 +227,7 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": true,
-          "cardSummary": "B本轮已验收：隔离、TTL与清理离线通过；压缩回填仍待补。",
+          "cardSummary": "隔离/生命周期已离线通过；B第二轮补同会话ID重用与历史安全匹配。",
           "badges": [
             "TTL离线通过",
             "主窗口已验收",
@@ -255,11 +255,11 @@ const mission = {
             {
               "id": "signature-history",
               "title": "同会话ID重用、历史与压缩回填",
-              "owner": "待分派",
-              "status": "pending",
+              "owner": "转换B",
+              "status": "active",
               "work": "明确历史工具调用如何匹配签名，避免ID重用或压缩后误配。",
               "acceptance": "正常历史、ID重用和压缩后匹配有明确规则与回归，不伪造或借用签名。",
-              "evidence": "尚未完成；不属于B本轮已交付范围。"
+              "evidence": "STEP-056：本轮已安排，等待实现、专项结果及主窗口验收；尚无新增PASS。"
             },
             {
               "id": "signature-thinking",
@@ -322,11 +322,37 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": false,
-          "cardSummary": "基础图片转换可用，多图与图片后追问待补。",
+          "cardSummary": "主窗口补多图、图文顺序与图片后追问离线矩阵；不是模型识图准确率验收。",
           "badges": [
             "基础已实现",
             "离线有覆盖",
             "当前实测待验"
+          ],
+          "workItems": [
+            {
+              "id": "multimodal-matrix",
+              "title": "多图与图片后追问的离线验证",
+              "owner": "主窗口",
+              "status": "active",
+              "work": "检查同轮多图、图文顺序、图片后追问及SDK最终请求的保真；非法或未支持媒体明确拒绝。",
+              "acceptance": "顺序、图片内容与类型、历史角色不丢失；核心转换和SDK最终请求均有断言，无真实联网。",
+              "evidence": "STEP-056：正在准备专项；尚无新增PASS。"
+            },
+            {
+              "id": "multimodal-followup",
+              "title": "按验证结果补齐未覆盖的多模态边界",
+              "owner": "待分派",
+              "status": "pending",
+              "work": "根据离线矩阵及目标模型实测，明确媒体工具结果和其他不支持输入的范围。",
+              "acceptance": "支持项有实现与验证；未支持项明确列出，不把基础图片通过当作所有多模态能力通过。",
+              "evidence": "未验收；真实CC多模态与目标模型结果另列02.02/02.03。"
+            }
+          ],
+          "completionRule": "本地约定的图片输入、多图与历史转换经过验证，并明确其余媒体边界后，才完成本节点的实现范围；模型识图质量和真实CC另验。",
+          "relatedNodes": [
+            "real-cc",
+            "complex-context",
+            "offline-regression"
           ]
         },
         {
@@ -375,7 +401,7 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": false,
-          "cardSummary": "C本轮已验收：显式模式、失败不重发与空流保护离线通过。",
+          "cardSummary": "显式模式已离线通过；C第二轮补意外EOF、工具终止与结束原因优先级。",
           "badges": [
             "模式离线通过",
             "主窗口已验收",
@@ -412,11 +438,11 @@ const mission = {
             {
               "id": "stream-termination",
               "title": "原生流复杂结束语义",
-              "owner": "待分派",
-              "status": "pending",
+              "owner": "转换C",
+              "status": "active",
               "work": "补已有内容但缺结束原因、工具分片后独立STOP等结束边界。",
               "acceptance": "不把未正常结束的生成标成功，也不错误覆盖工具调用结束状态。",
-              "evidence": "尚未完成；显式模式通过不代表所有原生SSE场景通过。"
+              "evidence": "STEP-056：本轮已安排，等待实现、专项结果及主窗口验收；尚无新增PASS。"
             }
           ],
           "completionRule": "显式模式、异常/空流处理、事件接线及声明支持的结束语义均有回归，才完成本地流式实现范围。复杂结束语义仍待补；逐模型实测另验。",
@@ -608,6 +634,15 @@ const mission = {
               "work": "在第一阶段约定功能补齐后，以明确代码与依赖版本形成交付基线。",
               "acceptance": "剩余功能与缺陷有结论，同一交付版本全量回归通过；依赖复现单独核验。",
               "evidence": "尚未到此里程碑；140项不是第一、二阶段全部完成的证据。"
+            },
+            {
+              "id": "offline-round2",
+              "title": "第二轮接线与统一回归",
+              "owner": "主窗口",
+              "status": "pending",
+              "work": "B/C交付冻结后接入签名历史API、复核流式组合并跑全量回归。",
+              "acceptance": "确认两窗口无并发写入，原有回归不退化，新增功能有跨模块断言；单列未完边界。",
+              "evidence": "等待B/C交付后开始；140项仍是上轮基线。"
             }
           ],
           "completionRule": "开发期间每次修改都可做配套回归；第一阶段约定功能收口并完成交付版本回归后，才完成本节点。当前仅本轮回归完成，未完成整个第二阶段。",
@@ -2088,15 +2123,15 @@ function nodeNumber(id) { return allNodes().find(n=>n.id===id)?.number || ""; }
 function workItemsSection(node) {
   if (!node.workItems?.length) return '<section class="detail-section"><h4>执行子任务</h4><p>本轮未登记执行子项。不代表已有实现为空；后续派工须先在此节点登记子项、负责人和验收条件。</p></section>';
   return '<section class="detail-section work-items"><h4>执行子任务 · 状态只代表本地验收</h4>'+node.workItems.map((item,i)=>
-    '<details class="work-item '+(item.status==="done"?"accepted":"")+'"><summary><span class="work-item-number">'+esc(node.number+"."+String(i+1).padStart(2,"0"))+'</span><strong>'+esc(item.title)+'</strong><span class="work-item-meta"><span>'+esc(item.owner)+'</span><span class="work-state">'+(item.status==="done"?"✓ 本地验收通过":"待处理 · 未派工")+'</span></span></summary><dl><dt>做什么</dt><dd>'+esc(item.work)+'</dd><dt>验收条件</dt><dd>'+esc(item.acceptance)+'</dd><dt>验证结果</dt><dd>'+esc(item.evidence)+'</dd></dl></details>'
+    '<details class="work-item '+(item.status==="done"?"accepted":"")+'"><summary><span class="work-item-number">'+esc(node.number+"."+String(i+1).padStart(2,"0"))+'</span><strong>'+esc(item.title)+'</strong><span class="work-item-meta"><span>'+esc(item.owner)+'</span><span class="work-state">'+(item.status==="done"?"✓ 本地验收通过":item.status==="active"?"进行中 · 待验收":item.owner!=="待分派"?"待前序完成":"待处理 · 未派工")+'</span></span></summary><dl><dt>做什么</dt><dd>'+esc(item.work)+'</dd><dt>验收条件</dt><dd>'+esc(item.acceptance)+'</dd><dt>验证结果</dt><dd>'+esc(item.evidence)+'</dd></dl></details>'
   ).join("")+'<div class="completion-rule"><b>父节点什么时候才算完成？</b><p>'+esc(node.completionRule)+'</p></div>'+((node.relatedNodes||[]).length?'<div class="related-nodes"><span>其他验收另看：</span>'+node.relatedNodes.map(id=>{const related=allNodes().find(n=>n.id===id);return related?'<button type="button" data-open-node="'+esc(id)+'">'+esc(related.number+" "+related.title)+'</button>':"";}).join("")+'</div>':"")+'</section>';
 }
 function renderExecution() {
   const plan=mission.execution;
-  document.querySelector("#execution").innerHTML='<div class="execution-heading"><div><p class="kicker">ONE ROADMAP · THREE OWNERS</p><h2 id="execution-title">'+esc(plan.title)+'</h2></div><span class="round-state">本轮已收尾</span></div><p class="execution-note">'+esc(plan.note)+'</p><div class="execution-grid">'+plan.cards.map(card=>{
+  document.querySelector("#execution").innerHTML='<div class="execution-heading"><div><p class="kicker">ONE ROADMAP · THREE OWNERS</p><h2 id="execution-title">'+esc(plan.title)+'</h2></div><span class="round-state">'+esc(plan.roundLabel || "本轮已收尾")+'</span></div><p class="execution-note">'+esc(plan.note)+'</p><div class="execution-grid">'+plan.cards.map(card=>{
     const node=allNodes().find(n=>n.id===card.nodeId);
     const items=node.workItems.filter(item=>card.taskIds.includes(item.id));
-    return '<article class="execution-card"><div class="execution-owner">'+esc(card.owner)+'<span>✓ 本轮子项本地验收通过</span></div><button type="button" class="execution-link" data-open-node="'+esc(node.id)+'"><span>'+esc(node.number)+'</span>'+esc(node.title)+'<b aria-hidden="true">↗</b></button><p class="execution-task">'+items.map(item=>esc(item.title)).join("；")+'</p><p class="execution-boundary"><b>父节点仍部分完成</b> · 点击查看剩余工作与验收标准</p></article>';
+    return '<article class="execution-card"><div class="execution-owner">'+esc(card.owner)+'<span class="'+(items.every(item=>item.status==="done")?"accepted":"working")+'">'+(items.every(item=>item.status==="done")?"✓ 本轮子项本地验收通过":items.some(item=>item.status==="active")?"本轮执行中 · 待验收":"已安排 · 待开始")+'</span></div><button type="button" class="execution-link" data-open-node="'+esc(node.id)+'"><span>'+esc(node.number)+'</span>'+esc(node.title)+'<b aria-hidden="true">↗</b></button><p class="execution-task">'+items.map(item=>esc(item.title)).join("；")+'</p><p class="execution-boundary"><b>父节点仍部分完成</b> · 点击查看剩余工作与验收标准</p></article>';
   }).join("")+'</div><p class="assignment-state">'+esc(plan.state)+'</p><p class="execution-rule">'+esc(plan.rule)+'</p>';
 }
 function openNode(id) {
