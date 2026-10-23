@@ -185,6 +185,7 @@ footer { max-width:1460px; margin:0 auto; padding:20px 40px 35px; color:#9ba6af;
 .execution-card { min-width:0; padding:18px; border:1px solid #dee7e9; border-radius:12px; background:#f9fbfb; }
 .execution-owner { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; font-size:13px; font-weight:650; }
 .execution-owner > span { font-size:10px; font-weight:500; color:#267d6c; }
+.execution-owner > .working { color:#9c702f; }
 .execution-link { display:flex; align-items:baseline; gap:8px; width:100%; margin:14px 0 10px; padding:0; border:0; text-align:left; background:none; color:#245969; font-size:15px; font-weight:650; line-height:1.7; }
 .execution-link:hover { color:#158271; }
 .execution-link > span { font-size:12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:#78939b; }
