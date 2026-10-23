@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "已追踪参考框架鉴权分支；最终配置与401根因待核实，本步无模型请求、不再索取AK",
+    subtitle: "本地明确走query AK；正式任务快照尚缺，不能与本地探针混同；401根因未定、不再索取AK",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2前置 · 鉴权契约已追踪，401待定位", priority: "critical", inProgress: true, recommended: true,
-        summary: "STEP-047：只读核对参考框架4.13.2的实际父类与调用链，确认鉴权有显式配置分支；本地尚未完整复用框架请求头与最终配置契约。用户提供片段未显示分支开关，任务最终合并配置待核实，不能认定卡片缺字段或请求头差异就是401根因。本步未请求模型、未索取AK、未改传输代码；最近线上仍为STEP-046的401，R2工具验收继续待定。",
+        id: "tool-definitions", title: "R2前置 · 本地鉴权已确认，任务配置待核对", priority: "critical", inProgress: true, recommended: true,
+        summary: "STEP-048：已沿同一CLI入口用合成凭据和MockTransport核对，当前本地明确为URL查询ak、无Authorization；不是evals合并后选出的分支。正式框架基础配置/额外覆盖链已追踪，未见自动开启鉴权开关。按项目记录尚无本项目Merlin验收任务或最终配置快照，不能替任务下结论。最近真实结果仍401；本步不联网请求模型、不索取AK、不修改鉴权代码，R2线上待定。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
