@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "本地ModelCard对齐及SDK兼容已离线验证：73项通过；真实验证待Trae前台恢复，尚未请求模型",
+    subtitle: "本地ModelCard对齐及SDK兼容已离线验证：73项通过；真实验证待确认Trae隐藏提示，尚未请求模型",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -98,7 +98,7 @@ const phases = [
       },
       {
         id: "tool-definitions", title: "R2前置 · 按ModelCard文本实测待启动", priority: "critical", inProgress: true, recommended: true,
-        summary: "STEP-045：本地按用户卡片构造65536/high/false/AUTO/google_search，无2048或额外temperature覆盖；实际SDK普通/流式请求均离线核对。修正thinking内层别名及流式ak/alt查询兼容，全量73项通过。Trae自动输入未执行，等待窗口前台恢复；还没有新的AK提示或真实请求。先验证按卡片文本鉴权，再继续复杂Schema；旧非流式401根因仍未确认。",
+        summary: "STEP-045：本地按用户卡片构造65536/high/false/AUTO/google_search，无2048或额外temperature覆盖；实际SDK普通/流式请求均离线核对。修正thinking内层别名及流式ak/alt查询兼容，全量73项通过。Trae控制受限，尚未目视确认隐藏输入提示；待前台恢复后先核对现有进程，避免重复启动。尚无新真实请求，R2及旧非流式401根因仍待验收。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
