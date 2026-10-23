@@ -3,12 +3,12 @@ const mission = {
     "title": "CC × GenAI 适配路线图",
     "subtitle": "本地协议适配 → 本地验证 → 合入 evals → Merlin 任务验证",
     "updated": "2026-10-23",
-    "revision": "parallel-accepted-20261023",
+    "revision": "task-map-20261023",
     "totalNodes": 15,
     "phases": 4,
     "currentModel": "gemini-3.8-flash",
     "offlineTests": 140,
-    "nextWork": "R3 历史回填 · 原生流结束语义"
+    "nextWork": "本轮已收尾 · 下一轮尚未派工"
   },
   "constraints": [
     {
@@ -27,6 +27,36 @@ const mission = {
       "text": "4-argon原生流权限错误仅是历史记录，3.8原生流待验。历史成功不自动迁移到其他型号；不将“待确认”写成“无法实现”。"
     }
   ],
+  "execution": {
+    "title": "本轮派工，对应网页哪一步？",
+    "note": "当前仍在第01阶段「本地协议适配」。开发时同步做离线回归，不代表第01阶段已完成，也不代表整个第02阶段已验收。",
+    "state": "B、C本轮已交付并停止；主窗口验收完成。下一轮尚未派工。",
+    "rule": "网页节点是唯一任务入口：先登记父节点、子项、负责人和验收条件，再派工。子项完成标子项；父节点全部满足完成标准才点亮。",
+    "cards": [
+      {
+        "owner": "转换B",
+        "nodeId": "signature",
+        "taskIds": [
+          "signature-lifecycle"
+        ]
+      },
+      {
+        "owner": "转换C",
+        "nodeId": "streaming",
+        "taskIds": [
+          "stream-mode",
+          "stream-failure"
+        ]
+      },
+      {
+        "owner": "主窗口",
+        "nodeId": "offline-regression",
+        "taskIds": [
+          "offline-bc"
+        ]
+      }
+    ]
+  },
   "phases": [
     {
       "id": "local-adaptation",
@@ -202,6 +232,50 @@ const mission = {
             "TTL离线通过",
             "主窗口已验收",
             "真实CC待验"
+          ],
+          "workItems": [
+            {
+              "id": "signature-isolation",
+              "title": "会话、模型与路由隔离",
+              "owner": "主窗口",
+              "status": "done",
+              "work": "防止相同工具ID在不同会话、实例或模型间串用签名。",
+              "acceptance": "普通与流式读写绑定同一作用域；不同作用域不得互相回填。",
+              "evidence": "STEP-051：新增33项隔离回归，包含在历史106项基线中。"
+            },
+            {
+              "id": "signature-lifecycle",
+              "title": "签名生命周期：过期、清理与并发",
+              "owner": "转换B",
+              "status": "done",
+              "work": "加入可配置过期时间、到期读取保护、本地清理；读取不延长有效期。",
+              "acceptance": "边界到期不可读，清理不误删并发新值；默认不启用时间过期，不擅定生产时长。",
+              "evidence": "STEP-054：B新增17项；主窗口统一140项离线验收通过。"
+            },
+            {
+              "id": "signature-history",
+              "title": "同会话ID重用、历史与压缩回填",
+              "owner": "待分派",
+              "status": "pending",
+              "work": "明确历史工具调用如何匹配签名，避免ID重用或压缩后误配。",
+              "acceptance": "正常历史、ID重用和压缩后匹配有明确规则与回归，不伪造或借用签名。",
+              "evidence": "尚未完成；不属于B本轮已交付范围。"
+            },
+            {
+              "id": "signature-thinking",
+              "title": "思考请求块的承接边界",
+              "owner": "待分派",
+              "status": "pending",
+              "work": "明确thinking/redacted_thinking等请求块的处理与保留策略。",
+              "acceptance": "支持范围有对应验证，不支持部分明确报错，不静默损坏历史。",
+              "evidence": "尚未完成；没有因TTL通过而升级此项状态。"
+            }
+          ],
+          "completionRule": "本地隔离、生命周期、历史/压缩匹配和思考块边界逐项实现并通过离线验证后，才完成此节点的本地实现范围。现在只是前两项通过。",
+          "relatedNodes": [
+            "evals-contract",
+            "real-cc",
+            "complex-context"
           ]
         },
         {
@@ -306,6 +380,51 @@ const mission = {
             "模式离线通过",
             "主窗口已验收",
             "原生能力待验"
+          ],
+          "workItems": [
+            {
+              "id": "stream-mode",
+              "title": "显式选择缓冲或原生流",
+              "owner": "转换C",
+              "status": "done",
+              "work": "默认buffered完整响应后包装SSE；native原生增量必须显式选择。",
+              "acceptance": "实际SDK端点与声明模式一致；不能把缓冲输出称作原生增量。",
+              "evidence": "STEP-054：C模式专项通过；真实模型原生能力仍未验收。"
+            },
+            {
+              "id": "stream-failure",
+              "title": "失败不重发与空流保护",
+              "owner": "转换C",
+              "status": "done",
+              "work": "取消401触发的隐式降级；首跳/中途错误不改走普通请求，空流明确失败。",
+              "acceptance": "不产生重复生成；异常安全返回，空流不包装成正常完成。",
+              "evidence": "与模式选择共用C新增10项回归，不重复计入140总数。"
+            },
+            {
+              "id": "stream-wiring",
+              "title": "本地调用方与Messages SSE组合接线",
+              "owner": "主窗口",
+              "status": "done",
+              "work": "增加本地启动模式选项，核验ModelCard三路径和Messages事件。",
+              "acceptance": "SDK端点、MAX_TOKENS、错误事件及启动选项与声明一致。",
+              "evidence": "STEP-054：覆盖于主窗口新增7项组合测试与既有ModelCard测试。"
+            },
+            {
+              "id": "stream-termination",
+              "title": "原生流复杂结束语义",
+              "owner": "待分派",
+              "status": "pending",
+              "work": "补已有内容但缺结束原因、工具分片后独立STOP等结束边界。",
+              "acceptance": "不把未正常结束的生成标成功，也不错误覆盖工具调用结束状态。",
+              "evidence": "尚未完成；显式模式通过不代表所有原生SSE场景通过。"
+            }
+          ],
+          "completionRule": "显式模式、异常/空流处理、事件接线及声明支持的结束语义均有回归，才完成本地流式实现范围。复杂结束语义仍待补；逐模型实测另验。",
+          "relatedNodes": [
+            "modelcard",
+            "real-cc",
+            "complex-context",
+            "evals-contract"
           ]
         },
         {
@@ -470,6 +589,32 @@ const mission = {
             "140项通过",
             "本步已重跑",
             "非模型验收"
+          ],
+          "workItems": [
+            {
+              "id": "offline-bc",
+              "title": "本轮B/C交付的组合与全量回归",
+              "owner": "主窗口",
+              "status": "done",
+              "work": "两窗口停止修改后，核对交付、补组合测试并统一跑全量回归。",
+              "acceptance": "原有回归无退化，新增行为有断言；只报告离线覆盖范围。",
+              "evidence": "STEP-054：140 tests / 3.892s / OK＝原106＋B17＋C10＋主窗口7。"
+            },
+            {
+              "id": "offline-closeout",
+              "title": "本地功能收口后的最终回归",
+              "owner": "待分派",
+              "status": "pending",
+              "work": "在第一阶段约定功能补齐后，以明确代码与依赖版本形成交付基线。",
+              "acceptance": "剩余功能与缺陷有结论，同一交付版本全量回归通过；依赖复现单独核验。",
+              "evidence": "尚未到此里程碑；140项不是第一、二阶段全部完成的证据。"
+            }
+          ],
+          "completionRule": "开发期间每次修改都可做配套回归；第一阶段约定功能收口并完成交付版本回归后，才完成本节点。当前仅本轮回归完成，未完成整个第二阶段。",
+          "relatedNodes": [
+            "dependencies",
+            "real-cc",
+            "complex-context"
           ]
         },
         {
@@ -1938,7 +2083,32 @@ function persistMarks() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(marks)); return true; }
   catch { return false; }
 }
-function allNodes() { return phases.flatMap(p => p.nodes.map(n => ({...n, phase:p.title}))); }
+function allNodes() { return phases.flatMap((p, pi) => p.nodes.map((n, ni) => ({...n, phase:p.title, number:String(pi+1).padStart(2,"0")+"."+String(ni+1).padStart(2,"0")}))); }
+function nodeNumber(id) { return allNodes().find(n=>n.id===id)?.number || ""; }
+function workItemsSection(node) {
+  if (!node.workItems?.length) return '<section class="detail-section"><h4>执行子任务</h4><p>本轮未登记执行子项。不代表已有实现为空；后续派工须先在此节点登记子项、负责人和验收条件。</p></section>';
+  return '<section class="detail-section work-items"><h4>执行子任务 · 状态只代表本地验收</h4>'+node.workItems.map((item,i)=>
+    '<details class="work-item '+(item.status==="done"?"accepted":"")+'"><summary><span class="work-item-number">'+esc(node.number+"."+String(i+1).padStart(2,"0"))+'</span><strong>'+esc(item.title)+'</strong><span class="work-item-meta"><span>'+esc(item.owner)+'</span><span class="work-state">'+(item.status==="done"?"✓ 本地验收通过":"待处理 · 未派工")+'</span></span></summary><dl><dt>做什么</dt><dd>'+esc(item.work)+'</dd><dt>验收条件</dt><dd>'+esc(item.acceptance)+'</dd><dt>验证结果</dt><dd>'+esc(item.evidence)+'</dd></dl></details>'
+  ).join("")+'<div class="completion-rule"><b>父节点什么时候才算完成？</b><p>'+esc(node.completionRule)+'</p></div>'+((node.relatedNodes||[]).length?'<div class="related-nodes"><span>其他验收另看：</span>'+node.relatedNodes.map(id=>{const related=allNodes().find(n=>n.id===id);return related?'<button type="button" data-open-node="'+esc(id)+'">'+esc(related.number+" "+related.title)+'</button>':"";}).join("")+'</div>':"")+'</section>';
+}
+function renderExecution() {
+  const plan=mission.execution;
+  document.querySelector("#execution").innerHTML='<div class="execution-heading"><div><p class="kicker">ONE ROADMAP · THREE OWNERS</p><h2 id="execution-title">'+esc(plan.title)+'</h2></div><span class="round-state">本轮已收尾</span></div><p class="execution-note">'+esc(plan.note)+'</p><div class="execution-grid">'+plan.cards.map(card=>{
+    const node=allNodes().find(n=>n.id===card.nodeId);
+    const items=node.workItems.filter(item=>card.taskIds.includes(item.id));
+    return '<article class="execution-card"><div class="execution-owner">'+esc(card.owner)+'<span>✓ 本轮子项本地验收通过</span></div><button type="button" class="execution-link" data-open-node="'+esc(node.id)+'"><span>'+esc(node.number)+'</span>'+esc(node.title)+'<b aria-hidden="true">↗</b></button><p class="execution-task">'+items.map(item=>esc(item.title)).join("；")+'</p><p class="execution-boundary"><b>父节点仍部分完成</b> · 点击查看剩余工作与验收标准</p></article>';
+  }).join("")+'</div><p class="assignment-state">'+esc(plan.state)+'</p><p class="execution-rule">'+esc(plan.rule)+'</p>';
+}
+function openNode(id) {
+  activeFilter="all"; searchInput.value="";
+  document.querySelectorAll(".filter").forEach(item=>item.classList.toggle("active",item.dataset.filter==="all"));
+  selectNode(id);
+  detailPanel.scrollTop=0;
+  requestAnimationFrame(()=> {
+    const target=window.matchMedia("(max-width:850px)").matches?detailPanel:document.querySelector('[data-node-id="'+id+'"]');
+    target?.scrollIntoView({behavior:"smooth",block:"center"});
+  });
+}
 function detailSection(title, items) {
   return items?.length ? '<section class="detail-section"><h4>'+esc(title)+'</h4><ul>'+items.map(item=>'<li>'+esc(item)+'</li>').join("")+'</ul></section>' : "";
 }
@@ -1955,7 +2125,7 @@ function render() {
     const done = phase.nodes.filter(n=>n.status === "done").length;
     return '<section class="phase" id="'+esc(phase.id)+'"><header class="phase-head"><span class="phase-number">'+esc(phase.code)+'</span><div class="phase-title"><h3>'+esc(phase.title)+'</h3><p>'+esc(phase.subtitle)+'</p></div><span class="phase-count">'+done+' / '+phase.nodes.length+' 节点范围完成</span></header><div class="node-list">'+visible.map(node=> {
       const symbol = node.status === "done" ? "✓" : node.status === "blocked" ? "!" : node.status === "active" ? "↻" : node.recommended ? "→" : "";
-      return '<button class="node '+(node.status==="done"?"completed":node.status==="active"?"in-progress":node.status==="blocked"?"blocked":"")+' '+(node.recommended?"recommended":"")+' '+(selectedId===node.id?"selected":"")+'" data-node-id="'+esc(node.id)+'" type="button" aria-pressed="'+(selectedId===node.id)+'"><span class="node-orb">'+symbol+'</span><span class="node-meta"><span class="node-id">'+esc(node.id)+'</span><span class="priority critical">'+(node.recommended?"下一开发":"主线")+'</span></span><h4>'+esc(node.title)+'</h4><p>'+esc(node.cardSummary || node.summary)+'</p><span class="node-status">'+esc(node.progress)+'</span><span class="node-facts">'+node.badges.map(t=>'<span>'+esc(t)+'</span>').join("")+'</span>'+(marks[node.id]?'<span class="personal-mark">个人标记：'+esc(labels[marks[node.id]] || "待核对")+'（不改变证据）</span>':"")+'</button>';
+      return '<button class="node '+(node.status==="done"?"completed":node.status==="active"?"in-progress":node.status==="blocked"?"blocked":"")+' '+(node.recommended?"recommended":"")+' '+(selectedId===node.id?"selected":"")+'" data-node-id="'+esc(node.id)+'" type="button" aria-pressed="'+(selectedId===node.id)+'"><span class="node-orb">'+symbol+'</span><span class="node-meta"><span class="node-id">'+esc(nodeNumber(node.id)+" · "+node.id)+'</span><span class="priority critical">'+(node.recommended?"待收口":"主线")+'</span></span><h4>'+esc(node.title)+'</h4><p>'+esc(node.cardSummary || node.summary)+'</p><span class="node-status">'+esc(node.progress)+'</span>'+(node.workItems?.length?'<span class="node-subtasks">'+node.workItems.filter(item=>item.status==="done").length+' / '+node.workItems.length+' 个执行子项已本地通过 · 查看分工 ↗</span>':"")+'<span class="node-facts">'+node.badges.map(t=>'<span>'+esc(t)+'</span>').join("")+'</span>'+(marks[node.id]?'<span class="personal-mark">个人标记：'+esc(labels[marks[node.id]] || "待核对")+'（不改变证据）</span>':"")+'</button>';
     }).join("")+'</div></section>';
   }).join("") || '<p class="empty-results">没有匹配节点。历史记录在下方单独保留，不参与筛选进度。</p>';
   document.querySelectorAll("[data-node-id]").forEach(button=>button.addEventListener("click",()=>selectNode(button.dataset.nodeId)));
@@ -1964,7 +2134,7 @@ function selectNode(id) {
   const node=allNodes().find(n=>n.id===id);
   if (!node) return;
   selectedId=id;
-  detailPanel.innerHTML='<div class="detail-content"><div class="detail-top"><div><span class="detail-code">'+esc(node.phase)+' · '+esc(node.id)+'</span><h3>'+esc(node.title)+'</h3></div></div><p class="detail-summary">'+esc(node.summary)+'</p><div class="fact-grid"><div><b>实现进度</b><span>'+esc(node.implementation)+'</span></div><div><b>离线验证</b><span>'+esc(node.offline)+'</span></div><div><b>当前模型 / 真实验证</b><span>'+esc(node.live)+'</span></div></div>'+detailSection("实现范围",node.goal)+detailSection("还缺什么",node.pending)+detailSection("验证方式",node.verify)+detailSection("完成标准",node.acceptance)+detailSection("当前证据",node.evidence)+detailSection("风险与边界",node.risks)+'<section class="status-control"><h4>浏览器个人标记 · 不修改项目事实</h4><div class="status-buttons">'+Object.entries(labels).map(([value,label])=>'<button class="status-button '+(marks[id]===value?"selected":"")+'" data-mark="'+value+'" type="button">'+esc(label)+'</button>').join("")+'</div><p class="status-hint" id="markHint">个人标记仅保存在当前浏览器，不作为完成、外部不支持或模型验收证据；阻塞不会自动从交付范围排除。</p></section><section class="detail-section"><h4>迁移自旧节点</h4><p>'+esc(node.sourceIds.length?node.sourceIds.join(" · "):"新增明确的框架接入检查节点")+'</p></section><div class="tags">'+node.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join("")+'</div></div>';
+  detailPanel.innerHTML='<div class="detail-content"><div class="detail-top"><div><span class="detail-code">'+esc(node.number+" "+node.phase)+' · '+esc(node.id)+'</span><h3>'+esc(node.title)+'</h3></div></div><p class="detail-summary">'+esc(node.summary)+'</p><div class="fact-grid"><div><b>实现进度</b><span>'+esc(node.implementation)+'</span></div><div><b>离线验证</b><span>'+esc(node.offline)+'</span></div><div><b>当前模型 / 真实验证</b><span>'+esc(node.live)+'</span></div></div>'+workItemsSection(node)+detailSection("实现范围",node.goal)+detailSection("还缺什么",node.pending)+detailSection("验证方式",node.verify)+detailSection("完成标准",node.acceptance)+detailSection("当前证据",node.evidence)+detailSection("风险与边界",node.risks)+'<section class="status-control"><h4>浏览器个人标记 · 不修改项目事实</h4><div class="status-buttons">'+Object.entries(labels).map(([value,label])=>'<button class="status-button '+(marks[id]===value?"selected":"")+'" data-mark="'+value+'" type="button">'+esc(label)+'</button>').join("")+'</div><p class="status-hint" id="markHint">个人标记仅保存在当前浏览器，不作为完成、外部不支持或模型验收证据；阻塞不会自动从交付范围排除。</p></section><section class="detail-section"><h4>迁移自旧节点</h4><p>'+esc(node.sourceIds.length?node.sourceIds.join(" · "):"新增明确的框架接入检查节点")+'</p></section><div class="tags">'+node.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join("")+'</div></div>';
   document.querySelectorAll("[data-mark]").forEach(button=>button.addEventListener("click",()=>{
     marks[id]=button.dataset.mark;
     const saved=persistMarks();
@@ -2001,12 +2171,12 @@ document.querySelectorAll(".filter").forEach(button=>button.addEventListener("cl
 }));
 searchInput.addEventListener("input",render);
 document.querySelector("#nextButton").addEventListener("click",()=>{
-  const next=allNodes().find(n=>n.recommended);
-  if(!next) return;
-  activeFilter="all";searchInput.value="";
-  document.querySelectorAll(".filter").forEach(item=>item.classList.toggle("active",item.dataset.filter==="all"));
-  selectNode(next.id);
-  requestAnimationFrame(()=>document.querySelector('[data-node-id="'+next.id+'"]')?.scrollIntoView({behavior:"smooth",block:"center"}));
+  const node=allNodes().find(n=>n.recommended);
+  if(node) openNode(node.id);
+});
+document.addEventListener("click",event=>{
+  const button=event.target.closest("[data-open-node]");
+  if(button) openNode(button.dataset.openNode);
 });
 document.querySelector("#resetButton").addEventListener("click",()=>{
   for(const key of Object.keys(marks)) delete marks[key];
@@ -2015,6 +2185,7 @@ document.querySelector("#resetButton").addEventListener("click",()=>{
   if(selectedId) selectNode(selectedId);
 });
 renderOverview();
+renderExecution();
 renderHistory();
 render();
 selectNode("signature");
