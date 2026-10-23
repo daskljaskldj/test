@@ -3,10 +3,12 @@ const mission = {
     "title": "CC × GenAI 适配路线图",
     "subtitle": "本地协议适配 → 本地验证 → 合入 evals → Merlin 任务验证",
     "updated": "2026-10-23",
-    "revision": "four-stage-20261023",
+    "revision": "r3-isolation-20261023",
     "totalNodes": 15,
     "phases": 4,
-    "currentModel": "gemini-3.8-flash"
+    "currentModel": "gemini-3.8-flash",
+    "offlineTests": 106,
+    "nextWork": "R3 · 生命周期与回填"
   },
   "constraints": [
     {
@@ -16,8 +18,8 @@ const mission = {
     },
     {
       "level": "note",
-      "title": "当前开发重点 · R3签名隔离",
-      "text": "先补会话/模型隔离与回填边界，优先复用ContextStore。当前没有Merlin任务需要查询，也不提前索取任务SID。"
+      "title": "R3第一步 · 隔离已离线通过",
+      "text": "会话、实际模型及入口路由隔离已实现，新增33项，全量106项离线通过。生命周期、压缩回填和真实CC会话标识仍待补；ContextStore适配器已备好，未正式接线。"
     },
     {
       "level": "note",
@@ -145,36 +147,43 @@ const mission = {
         {
           "id": "signature",
           "title": "思考与签名管理 · R3",
-          "status": "pending",
-          "progress": "待整改 · 下一开发节点",
-          "implementation": "存在基础签名缓存回填，但缺隔离；不是已修复",
-          "offline": "已复现跨会话同 ID 串用，修复回归尚未完成",
-          "live": "当前模型多轮签名与压缩场景待验证",
-          "summary": "先完成签名会话/模型隔离与回填边界，优先复用 evals ContextStore；不扩建独立 Redis 服务。",
+          "status": "active",
+          "progress": "第一步隔离已实现 · R3整体部分完成",
+          "implementation": "会话/实例/实际模型/入口路由隔离；普通与流式共用可注入存储",
+          "offline": "STEP-051：新增33项，全量106 tests / 3.170s / OK",
+          "live": "真实CC会话标识、当前模型签名多轮与压缩场景仍待验证",
+          "summary": "签名按明确会话、实际模型和入口隔离，普通与SSE回填已有离线回归；优先复用ContextStore，不扩建独立存储。生命周期与压缩等仍未完成。",
           "goal": [
             "只保存实际返回的签名，跨轮原样回填",
             "会话/模型隔离、生命周期与压缩后的匹配",
             "明确 thinking/redacted_thinking 的承接边界"
           ],
           "pending": [
-            "修复共享字典缺会话/模型隔离及 TTL 的问题",
-            "补同 ID、并发、子会话、缺失与过期签名回归",
-            "当前请求端尚不接受 thinking/redacted_thinking 内容块"
+            "补TTL、清理与重启边界；当前仅有4096条LRU容量上限",
+            "处理同一会话工具ID重用、内容匹配与压缩后的回填",
+            "真实CC会话来源及正式evals ContextStore接线仍待验证",
+            "请求端thinking/redacted_thinking内容块尚未支持"
           ],
           "verify": [
-            "两会话或两模型复用相同工具 ID 不串签名",
-            "并行部分签名、压缩与历史裁剪可解释"
+            "已离线验证：同ID跨会话/实例/实际模型/路由不串签名",
+            "已离线验证：普通↔流式回填、双路SSE并发、真实SDK签名字节",
+            "已离线验证：ContextStore回调逐签名独立键、异常脱敏与缺会话拒绝",
+            "待补：压缩、过期及真实框架/CC接线"
           ],
           "acceptance": [
             "不会向另一会话/模型回填签名",
             "不泄露隐藏思维，不伪造缺失签名"
           ],
           "risks": [
-            "现有应用级缓存虽有4096条上限，仍缺隔离与生命周期"
+            "无明确会话ID时，纯文本不跨请求缓存；工具历史在上游调用前400",
+            "真实CC是否自动携带可用会话ID尚未验证；该身份键不是鉴权机制",
+            "TTL、同会话ID重用、压缩匹配未完成；ContextStore回调测试不等于框架验收"
           ],
           "evidence": [
-            "R3 尚未整改；已复现跨会话签名错配",
-            "合仓优先沿用 ContextStore；当前未接入"
+            "STEP-051：旧跨会话串用红测复现后修复；新增21项路由+12项存储/回调",
+            "全量106项离线通过；上游为mock，未输入AK或请求真实模型",
+            "重复query路由差异红测后修复，独立复核确认隔离",
+            "默认线程安全LRU；可注入ContextStore适配器已实现，正式接线未做"
           ],
           "tags": [
             "R3",
@@ -187,11 +196,11 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": true,
-          "cardSummary": "补会话与模型隔离，解决签名跨轮回填串用风险。",
+          "cardSummary": "会话、实际模型与路由隔离已修；生命周期和压缩待补。",
           "badges": [
-            "R3待整改",
-            "问题已复现",
-            "下一开发节点"
+            "隔离已实现",
+            "33项新增回归",
+            "真实CC待验"
           ]
         },
         {
@@ -413,17 +422,17 @@ const mission = {
           "id": "offline-regression",
           "title": "离线回归",
           "status": "active",
-          "progress": "当前基线73项通过 · 待随功能补齐",
+          "progress": "当前基线106项通过 · 随后续功能补齐",
           "implementation": "现有单元测试与真实 SDK MockTransport 契约可运行",
-          "offline": "STEP-045：73 tests / 3.043s / OK，本轮未重跑",
+          "offline": "STEP-051：106 tests / 3.170s / OK，本步实际重跑",
           "live": "此节点不代表模型或 Merlin 验收",
-          "summary": "R1/R2/R4/R5 已有离线证据；完整本地适配尚未完成，所以离线验证阶段仍需跟随 R3 等改动补回归。",
+          "summary": "R1/R2/R4/R5及R3第一步隔离已有离线证据。后续生命周期、压缩、显式流模式与其他适配继续补回归；测试数量不等于模型验收率。",
           "goal": [
             "字段保真、Schema、签名隔离、配置差异与异常",
             "SDK 最终请求和探针语义/退出码"
           ],
           "pending": [
-            "补R3、显式流模式与其他新增能力回归",
+            "补R3剩余生命周期/历史回填、显式流模式与其他能力回归",
             "相关代码变更后定向重跑，再形成新全量基线"
           ],
           "verify": [
@@ -438,7 +447,8 @@ const mission = {
             "测试数量不是准确率或交付百分比"
           ],
           "evidence": [
-            "当前73项为既有基线；本次仅改网页未重跑协议测试"
+            "STEP-051：全量106项通过，新增33项隔离回归",
+            "旧73项/STEP-045基线与历史失败均保留；未新增线上模型验收"
           ],
           "tags": [
             "tests",
@@ -450,10 +460,10 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": false,
-          "cardSummary": "保留73项通过基线，随R3等改动补齐回归。",
+          "cardSummary": "新增33项R3隔离回归，全量106项离线通过。",
           "badges": [
-            "基线73项",
-            "非本轮新跑",
+            "106项通过",
+            "本步已重跑",
             "非模型验收"
           ]
         },
@@ -646,7 +656,9 @@ const mission = {
           ],
           "evidence": [
             "已确认现有Provider使用统一消息和ChatCompletionResponse",
-            "4.13.2父类及配置链已查，但正式接入仍未实现"
+            "4.13.2父类及配置链已查，但正式接入仍未实现",
+            "STEP-051：ContextStore回调适配器与路由测试已备好，未正式接入框架",
+            "只读核对远端master与参考导出版本一致；核心GenAIProvider/签名缓存契约已读"
           ],
           "tags": [
             "evals",
@@ -844,7 +856,7 @@ const mission = {
     },
     {
       "title": "本地修复与离线证据",
-      "scope": "离线证据，不等于当前模型线上通过",
+      "scope": "截至STEP-050的历史离线证据，不代表当前模型线上通过",
       "items": [
         "R1结束原因、R2复杂Schema、R4异常链脱敏、R5探针语义均有离线修复证据",
         "基线随改动递增：28→31→37→42→55→61→66→73项；不是本轮新跑",
@@ -861,6 +873,17 @@ const mission = {
         "最近ModelCard实测为401/INCONCLUSIVE/exit2，未得到答案验收",
         "本地同CLI离线重建确认query ak、无Authorization；合成200不是线上鉴权PASS",
         "曾追踪参考框架配置链，但本地探针不经过该链；本项目尚未发Merlin验收任务"
+      ]
+    },
+    {
+      "title": "STEP-051 · R3第一步隔离",
+      "scope": "新增本地实现/离线证据，R3整体未完成",
+      "items": [
+        "会话/实例/实际模型/入口路由隔离；普通与流式跨轮恢复已离线验证",
+        "新增21项路由+12项存储/回调，全量106 tests / 3.170s / OK",
+        "旧跨会话串用及重复query路由问题均先红测后修复，后者独立复核通过",
+        "ContextStore回调适配器可注入；正式框架接线、真实CC会话来源未验",
+        "TTL、重启、同会话ID重用、压缩匹配及思考请求块仍待补；没有新模型请求"
       ]
     }
   ],
@@ -1879,7 +1902,6 @@ const mission = {
   },
   "scopeNote": "已完成只针对节点写明的范围。实现、离线、当前模型真实验证分别展示；历史快照文字按当时语境理解，不作当前结论。"
 };
-
 const phases = mission.phases;
 const STORAGE_KEY = "cc-genai-personal-marks-v3";
 const marks = loadMarks();
@@ -1938,9 +1960,9 @@ function selectNode(id) {
 function renderOverview() {
   document.querySelector("#currentModel").textContent=mission.meta.currentModel;
   document.querySelector("#totalCount").textContent=allNodes().length;
-  document.querySelector("#offlineCount").textContent="73 项";
+  document.querySelector("#offlineCount").textContent=mission.meta.offlineTests+" 项";
   document.querySelector("#activeCount").textContent=allNodes().filter(n=>n.status==="active").length;
-  document.querySelector("#nextWork").textContent="R3 · 签名隔离";
+  document.querySelector("#nextWork").textContent=mission.meta.nextWork;
   document.querySelector("#constraints").innerHTML=mission.constraints.map(item=>'<article class="notice '+esc(item.level)+'"><h3>'+esc(item.title)+'</h3><p>'+esc(item.text)+'</p></article>').join("");
 }
 function renderHistory() {
