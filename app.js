@@ -3,7 +3,7 @@ const mission = {
     "title": "CC × GenAI 适配路线图",
     "subtitle": "本地协议适配 → 本地验证 → 合入 evals → Merlin 任务验证",
     "updated": "2026-10-23",
-    "revision": "round2-dispatch-20261023",
+    "revision": "round2-specialist-20261023",
     "totalNodes": 15,
     "phases": 4,
     "currentModel": "gemini-3.8-flash",
@@ -31,7 +31,7 @@ const mission = {
     "title": "第二轮分工 · 为18:00进度同步准备",
     "roundLabel": "第二轮执行中",
     "note": "仍在第01阶段「本地协议适配」。本轮先补签名历史、流式结束及多模态离线覆盖；只有主窗口验收后才更新通过结果。",
-    "state": "B、C第二轮均已启动；主窗口准备多模态专项及最终接线验收。原140项是上一轮已验收基线，本轮尚未增加通过数。",
+    "state": "B正在实现签名历史绑定；C已交付38项专项通过，主窗口多模态8项专项通过。正在复核和等待统一集成；140项仍是上轮全量基线。",
     "rule": "网页节点是唯一任务入口：先登记父节点、子项、负责人和验收条件，再派工。子项完成标子项；父节点全部满足完成标准才点亮。",
     "cards": [
       {
@@ -259,7 +259,7 @@ const mission = {
               "status": "active",
               "work": "明确历史工具调用如何匹配签名，避免ID重用或压缩后误配。",
               "acceptance": "正常历史、ID重用和压缩后匹配有明确规则与回归，不伪造或借用签名。",
-              "evidence": "STEP-056：本轮已安排，等待实现、专项结果及主窗口验收；尚无新增PASS。"
+              "evidence": "C-006：新增23项结束语义回归、专项38项通过；已冻结并交主窗口复核，尚未完成本轮统一回归。"
             },
             {
               "id": "signature-thinking",
@@ -284,7 +284,7 @@ const mission = {
           "status": "active",
           "progress": "基础已实现 · 扩展待补",
           "implementation": "基础 base64/URL 图片输入已实现",
-          "offline": "图片数据映射有离线覆盖",
+          "offline": "STEP-057：新增8项多图/历史/SDK最终请求专项通过；全量待统一回归",
           "live": "4-argon 单图有历史成功；3.8 完整矩阵待验证",
           "summary": "保留基础图片转换，补齐多图、图片后追问与混合内容；历史单图成功不代表当前模型全部多模态通过。",
           "goal": [
@@ -322,7 +322,7 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": false,
-          "cardSummary": "主窗口补多图、图文顺序与图片后追问离线矩阵；不是模型识图准确率验收。",
+          "cardSummary": "多图、图文顺序与图片后追问8项离线专项通过，待统一回归；不是模型识图准确率验收。",
           "badges": [
             "基础已实现",
             "离线有覆盖",
@@ -336,7 +336,7 @@ const mission = {
               "status": "active",
               "work": "检查同轮多图、图文顺序、图片后追问及SDK最终请求的保真；非法或未支持媒体明确拒绝。",
               "acceptance": "顺序、图片内容与类型、历史角色不丢失；核心转换和SDK最终请求均有断言，无真实联网。",
-              "evidence": "STEP-056：正在准备专项；尚无新增PASS。"
+              "evidence": "STEP-057 / A24：8项专项通过（0.113s）；含真实SDK MockTransport三路径，MIME与解码图片字节相等；无真实模型请求，待统一回归。"
             },
             {
               "id": "multimodal-followup",
@@ -401,7 +401,7 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": false,
-          "cardSummary": "显式模式已离线通过；C第二轮补意外EOF、工具终止与结束原因优先级。",
+          "cardSummary": "显式模式已验收；C第二轮结束语义38项专项通过，已冻结，待主窗口集成验收。",
           "badges": [
             "模式离线通过",
             "主窗口已验收",
@@ -442,7 +442,7 @@ const mission = {
               "status": "active",
               "work": "补已有内容但缺结束原因、工具分片后独立STOP等结束边界。",
               "acceptance": "不把未正常结束的生成标成功，也不错误覆盖工具调用结束状态。",
-              "evidence": "STEP-056：本轮已安排，等待实现、专项结果及主窗口验收；尚无新增PASS。"
+              "evidence": "C-006：新增23项结束语义回归、专项38项通过；已冻结并交主窗口复核，尚未完成本轮统一回归。"
             }
           ],
           "completionRule": "显式模式、异常/空流处理、事件接线及声明支持的结束语义均有回归，才完成本地流式实现范围。复杂结束语义仍待补；逐模型实测另验。",
