@@ -3,12 +3,12 @@ const mission = {
     "title": "CC × GenAI 适配路线图",
     "subtitle": "本地协议适配 → 本地验证 → 合入 evals → Merlin 任务验证",
     "updated": "2026-10-23",
-    "revision": "r3-isolation-20261023",
+    "revision": "parallel-bc-20261023",
     "totalNodes": 15,
     "phases": 4,
     "currentModel": "gemini-3.8-flash",
     "offlineTests": 106,
-    "nextWork": "R3 · 生命周期与回填"
+    "nextWork": "B / C 并行开发 · 主窗口验收"
   },
   "constraints": [
     {
@@ -18,8 +18,8 @@ const mission = {
     },
     {
       "level": "note",
-      "title": "R3第一步 · 隔离已离线通过",
-      "text": "会话、实际模型及入口路由隔离已实现，新增33项，全量106项离线通过。生命周期、压缩回填和真实CC会话标识仍待补；ContextStore适配器已备好，未正式接线。"
+      "title": "三窗口并行 · 已启动，待验收",
+      "text": "转换B负责签名生命周期，转换C负责显式流式模式；主窗口负责接入、验收与网页同步。文件分开修改，完成后统一回归；106项仍是上次验收基线，本轮尚未验收。"
     },
     {
       "level": "note",
@@ -148,18 +148,18 @@ const mission = {
           "id": "signature",
           "title": "思考与签名管理 · R3",
           "status": "active",
-          "progress": "第一步隔离已实现 · R3整体部分完成",
+          "progress": "转换B开发中 · 生命周期待主窗口验收",
           "implementation": "会话/实例/实际模型/入口路由隔离；普通与流式共用可注入存储",
           "offline": "STEP-051：新增33项，全量106 tests / 3.170s / OK",
           "live": "真实CC会话标识、当前模型签名多轮与压缩场景仍待验证",
-          "summary": "签名按明确会话、实际模型和入口隔离，普通与SSE回填已有离线回归；优先复用ContextStore，不扩建独立存储。生命周期与压缩等仍未完成。",
+          "summary": "第一步会话、模型与路由隔离已离线通过。转换B正在补可配置过期、清理及并发边界，交付后由主窗口验收；不扩建独立存储，压缩等仍为后续范围。",
           "goal": [
             "只保存实际返回的签名，跨轮原样回填",
             "会话/模型隔离、生命周期与压缩后的匹配",
             "明确 thinking/redacted_thinking 的承接边界"
           ],
           "pending": [
-            "补TTL、清理与重启边界；当前仅有4096条LRU容量上限",
+            "转换B负责：可配置TTL、过期清理和并发边界；完成后主窗口验收",
             "处理同一会话工具ID重用、内容匹配与压缩后的回填",
             "真实CC会话来源及正式evals ContextStore接线仍待验证",
             "请求端thinking/redacted_thinking内容块尚未支持"
@@ -196,7 +196,7 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": true,
-          "cardSummary": "会话、实际模型与路由隔离已修；生命周期和压缩待补。",
+          "cardSummary": "转换B开发中：签名过期、清理与并发边界；隔离第一步已通过。",
           "badges": [
             "隔离已实现",
             "33项新增回归",
@@ -258,17 +258,17 @@ const mission = {
           "id": "streaming",
           "title": "流式响应适配",
           "status": "active",
-          "progress": "部分完成 · 模式待收敛",
+          "progress": "转换C开发中 · 显式模式待主窗口验收",
           "implementation": "Messages SSE 及工具参数事件已有实现",
           "offline": "SSE 事件与 SDK 流式参数已有离线覆盖",
           "live": "4-argon 原生流历史权限错误；3.8 原生流未验收",
-          "summary": "明确区分 native 与 buffered SSE。现有代码仍会先试原生、特定错误后自动回退，不把缓冲输出叫原生增量。",
+          "summary": "转换C正在区分native与buffered SSE，默认缓冲、原生显式选择，并移除401触发的隐式降级；分片输出后出错不得偷偷重发。实现和专项回归完成后由主窗口验收。",
           "goal": [
             "Messages SSE 事件顺序、文本与工具参数 delta",
             "按卡片显式声明原生流或缓冲流模式"
           ],
           "pending": [
-            "收敛显式模式，避免无说明自动回退",
+            "转换C负责：显式buffered/native、取消隐式降级及中途失败测试",
             "逐卡片验证原生能力与断连行为"
           ],
           "verify": [
@@ -297,9 +297,9 @@ const mission = {
           ],
           "priority": "critical",
           "recommended": false,
-          "cardSummary": "明确原生增量与缓冲SSE，收敛显式流式模式。",
+          "cardSummary": "转换C开发中：显式原生/缓冲模式，避免隐式降级与重复输出。",
           "badges": [
-            "模式待收敛",
+            "转换C开发中",
             "SSE有覆盖",
             "原生能力待验"
           ]
