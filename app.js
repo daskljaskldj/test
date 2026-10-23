@@ -103,7 +103,7 @@ const phases = [
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
         risks: ["两种协议 JSON Schema 支持范围不同"],
-        evidence: ["2026-10-22：已移除缩窄联合/静默删字段的清洗逻辑；复杂 Schema 走 parameters_json_schema", "真实 SDK + MockTransport 验证同步/流式最终 HTTP 请求，保留引用、约束、false、null 与混合枚举", "非字符串/空枚举避免 SDK 普通 Schema 的重新解释；非法 JSON 明确报错并隔离输入可变值", "全量离线回归 37 tests / OK；当前卡片及其他 Gemini 卡片在线接受情况待验证，节点不标完成"], tags: ["tools", "schema", "function calling"]
+        evidence: ["2026-10-22：已移除缩窄联合/静默删字段的清洗逻辑；复杂 Schema 走 parameters_json_schema", "真实 SDK + MockTransport 验证同步/流式最终 HTTP 请求，保留引用、约束、false、null 与混合枚举", "非字符串/空枚举避免 SDK 普通 Schema 的重新解释；非法 JSON 明确报错并隔离输入可变值", "2026-10-23 STEP-040：R2 专项 6 tests / OK；额外 10 组 Schema × 同步/流式共 20 次最终请求断言 PASS，3 类非法 JSON 拒绝", "覆盖递归引用、组合/条件、数值/字符串/数组约束、false/null/枚举、属性名及基础数组/null；未修改协议源码，也未请求模型", "当前 editable SDK 下的离线保真已复验；目标卡片及其他 Gemini 卡片在线接受情况待验证，节点不标完成"], tags: ["tools", "schema", "function calling"]
       },
       {
         id: "tool-use-response", title: "functionCall → tool_use", priority: "critical",
