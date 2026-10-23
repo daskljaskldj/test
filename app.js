@@ -74,7 +74,7 @@ const phases = [
     id: "protocol",
     number: "PHASE 02",
     title: "协议兼容与核心能力",
-    subtitle: "R2 真实请求首跳401；URL已匹配、AK来源已确认，鉴权原因待定位；不代表Schema不支持",
+    subtitle: "最小文本请求同样401：先定位鉴权，不继续盲跑复杂Schema；66项离线回归通过不代表线上通过",
     nodes: [
       {
         id: "endpoint-contract", title: "端点协议探测（历史记录）", priority: "critical", done: true,
@@ -97,8 +97,8 @@ const phases = [
         tags: ["external-blocked", "streamGenerateContent", "buffered_sse"]
       },
       {
-        id: "tool-definitions", title: "R2 · 真实验证首跳 401（鉴权待核对）", priority: "critical", inProgress: true, recommended: true,
-        summary: "3.8-flash首个union场景返回401，INCONCLUSIVE退出，后两组未运行，Schema与工具闭环未验收。ModelCard URL已匹配，用户确认AK来自该卡且也用于Gemini 4；合成凭据离线验证SDK完整端点和ak保留（含无Google API Key路径）。真实鉴权原因仍待定位，不要求换AK、不据401认定AK过期。",
+        id: "tool-definitions", title: "R2 · 最小文本也返回401，鉴权待定位", priority: "critical", inProgress: true, recommended: true,
+        summary: "STEP-043：不带工具/图片的3.8-flash最小文本真实请求仍401，auth=rejected、exit2，已停止，未继续复杂Schema。输入无空白/控制字符，未检测到Google凭据或常见代理环境变量非空；URL匹配、AK来源已确认。不据此认定AK失效或模型不支持。新增5项离线护栏，全量66项通过；下一步对照可用调用的鉴权契约/服务端记录，R2保持未验收。",
         goal: ["JSON Schema 字段转换", "tool_choice auto/any/指定工具映射", "保留工具名称与描述"],
         verify: ["单工具、多工具、嵌套 schema", "不支持的 schema 关键字明确处理"],
         acceptance: ["模型可看到并选择正确工具", "schema 不被静默破坏"],
