@@ -175,3 +175,54 @@ footer { max-width:1460px; margin:0 auto; padding:20px 40px 35px; color:#9ba6af;
 .detail-section li, .detail-section p { color:#687c89; font-size:12px; }
 .history-card summary span { color:#788996; }
 .legacy-record p { color:#6e808d; font-size:12px; }
+/* Explicit milestone, subtask and owner mapping */
+.execution { margin:0 0 20px; padding:24px; background:#fff; border:1px solid #cbded9; border-radius:16px; box-shadow:var(--shadow); }
+.execution-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.execution h2 { margin:7px 0 0; font-size:21px; line-height:1.5; font-weight:650; }
+.round-state { color:#247767; background:#e9f4ef; border-radius:20px; padding:6px 12px; font-size:11px; white-space:nowrap; }
+.execution-note { color:#607783; font-size:12px; line-height:1.8; margin:12px 0 18px; }
+.execution-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.execution-card { min-width:0; padding:18px; border:1px solid #dee7e9; border-radius:12px; background:#f9fbfb; }
+.execution-owner { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; font-size:13px; font-weight:650; }
+.execution-owner > span { font-size:10px; font-weight:500; color:#267d6c; }
+.execution-link { display:flex; align-items:baseline; gap:8px; width:100%; margin:14px 0 10px; padding:0; border:0; text-align:left; background:none; color:#245969; font-size:15px; font-weight:650; line-height:1.7; }
+.execution-link:hover { color:#158271; }
+.execution-link > span { font-size:12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:#78939b; }
+.execution-link > b { margin-left:auto; font-weight:500; }
+.execution-task { margin:0 0 12px; min-height:44px; color:#627681; font-size:12px; line-height:1.8; }
+.execution-boundary { border-top:1px solid #e3eaeb; padding-top:11px; margin:0; color:#81919b; font-size:10px; line-height:1.8; }
+.execution-boundary b { color:#a37635; font-weight:550; }
+.assignment-state { color:#476a71; font-size:12px; line-height:1.8; margin:17px 0 5px; }
+.execution-rule { color:#7e8c95; font-size:11px; line-height:1.8; margin:0; }
+.node-subtasks { display:block; color:#367a70; font-size:10px; line-height:1.7; margin-top:8px; }
+.work-items > h4 { font-size:12px; }
+.work-item { border:1px solid #e1e8eb; border-radius:9px; margin:9px 0; background:#fafcfc; overflow:hidden; }
+.work-item summary { padding:12px; font-size:12px; list-style:none; }
+.work-item summary::-webkit-details-marker { display:none; }
+.work-item summary::after { content:"展开工作与验收 ↓"; display:block; color:#83939e; font-size:10px; margin-top:8px; }
+.work-item[open] summary::after { content:"收起 ↑"; }
+.work-item-number { display:block; color:#7a909c; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; margin-bottom:4px; }
+.work-item summary strong { display:block; font-weight:600; color:#365665; }
+.work-item-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px; margin-top:8px; font-size:10px; color:#6d818d; }
+.work-state { color:#94783e; }
+.accepted .work-state { color:#247e6a; }
+.work-item dl { padding:0 12px 12px; margin:0; font-size:11px; line-height:1.8; }
+.work-item dt { color:#467382; font-weight:600; margin:10px 0 3px; }
+.work-item dd { margin:0; color:#6c7e89; overflow-wrap:anywhere; }
+.completion-rule { background:#fff8ed; border-left:2px solid #d5b57e; padding:13px; border-radius:7px; margin-top:15px; }
+.completion-rule b { font-size:11px; color:#8b6e3f; }
+.completion-rule p { font-size:11px; margin:7px 0 0; }
+.related-nodes { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; font-size:10px; color:#83929c; }
+.related-nodes > span { width:100%; }
+.related-nodes button { border:1px solid #dae5e9; border-radius:5px; background:#fff; color:#547c88; padding:5px 7px; font-size:10px; }
+@media (max-width:850px) {
+ .execution-grid { grid-template-columns:1fr; }
+ .execution-task { min-height:0; }
+ .execution-card { padding:15px; }
+}
+@media (max-width:560px) {
+ .execution { padding:18px; }
+ .execution-heading { align-items:start; }
+ .execution h2 { font-size:17px; }
+ .round-state { font-size:10px; padding:5px 8px; }
+}
