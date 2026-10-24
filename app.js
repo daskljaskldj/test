@@ -1,4 +1,4 @@
-const mission = {
+window.MISSION = {
   "meta": {
     "title": "CC × GenAI 适配路线图",
     "subtitle": "本地协议适配 → 本地验证 → 合入 evals → Merlin 任务验证",
@@ -2096,8 +2096,1366 @@ const mission = {
     "load": "merlin-smoke",
     "accuracy": "benchmark"
   },
-  "scopeNote": "已完成只针对节点写明的范围。实现、离线、当前模型真实验证分别展示；历史快照文字按当时语境理解，不作当前结论。"
+  "scopeNote": "已完成只针对节点写明的范围。实现、离线、当前模型真实验证分别展示；历史快照文字按当时语境理解，不作当前结论。",
+  "localHistorySnapshot": {
+    "meta": {
+      "title": "CC × GenAI 适配任务板",
+      "subtitle": "Claude Code → Anthropic Messages → Google GenAI SDK → ModelHub",
+      "updated": "2026-10-23",
+      "totalNodes": 29,
+      "phases": 4
+    },
+    "constraints": [
+      {
+        "level": "note",
+        "title": "兼容目标为 Gemini 系列",
+        "text": "当前以 gemini-3.8-flash 开发验证；交付通过具体 ModelCard 与能力配置兼容 Gemini 系列。各模型设置分别核对，资源受限只记待验收；历史 PASS 不自动迁移到其他模型。"
+      },
+      {
+        "level": "blocked",
+        "title": "流式模式待收敛",
+        "text": "4-argon 有原生流权限错误，3.8-flash 尚未核验。文档约定 buffered_sse，但代码还会先试 native 再自动回退，需显式配置。"
+      },
+      {
+        "level": "risk",
+        "title": "签名缓存未生产化",
+        "text": "缓存在应用实例内共享，已有 4096 条上限；缺会话/模型隔离与 TTL，同 ID 会错配。evals 接入优先复用 ContextStore。"
+      },
+      {
+        "level": "note",
+        "title": "旁路试验仅作参考",
+        "text": "他人直连 ModelHub /v1/messages 的单轮试验不改变主线，也不修改本机全局 CC settings。"
+      },
+      {
+        "level": "note",
+        "title": "交付流程已确认",
+        "text": "本地完成实现与测试 → Git 提交到 evals → 用户在 Merlin 发起任务验证。本地 HTTP 服务用于联调，不默认独立部署。"
+      },
+      {
+        "level": "risk",
+        "title": "全盘审查：5 项优先整改",
+        "text": "28 个原有测试通过，离线仍复现结束原因、Schema、签名隔离、异常脱敏、探针误判缺陷。进度环仅表示历史节点记录。"
+      }
+    ],
+    "phases": [
+      {
+        "id": "foundation",
+        "code": "PHASE 01",
+        "title": "基础链路",
+        "subtitle": "先证明协议转换和真实 CC 入口可用",
+        "nodes": [
+          {
+            "id": "sdk-transport",
+            "title": "Google GenAI SDK 接入",
+            "priority": "critical",
+            "status": "done",
+            "summary": "使用 google-genai SDK 连接 ModelHub 原生 generateContent，不手写上游 HTTP JSON。",
+            "goal": [
+              "拆分 ModelHub endpoint 与模型名",
+              "AK 仅运行时输入，不落盘",
+              "适配公司证书与网络环境"
+            ],
+            "verify": [
+              "SDK 真实单轮请求返回",
+              "确认请求目标为当前目标模型",
+              "SDK 版本固定并可复现"
+            ],
+            "acceptance": [
+              "不直接拼装 GenAI HTTP body",
+              "真实请求成功且 usage 可读取"
+            ],
+            "risks": [
+              "证书链、飞连节点和 endpoint 变化",
+              "AK 泄露到日志或配置"
+            ],
+            "evidence": [
+              "google-genai 2.31.0 已以 editable 方式安装",
+              "真实 SDK 请求返回成功"
+            ],
+            "tags": [
+              "SDK",
+              "ModelHub",
+              "认证"
+            ]
+          },
+          {
+            "id": "messages-service",
+            "title": "真实 /v1/messages 服务",
+            "priority": "critical",
+            "status": "done",
+            "summary": "提供 Claude Code 可直接访问的 Anthropic Messages 兼容 HTTP 服务。",
+            "goal": [
+              "FastAPI 暴露 POST /v1/messages",
+              "支持 JSON 与 SSE 响应",
+              "统一 Anthropic error shape"
+            ],
+            "verify": [
+              "GET /healthz=200",
+              "真实 Claude Code 访问本地 endpoint",
+              "服务日志出现 POST /v1/messages 200"
+            ],
+            "acceptance": [
+              "无需模拟 CC 请求",
+              "Claude Code 可完成一次真实调用"
+            ],
+            "risks": [
+              "Claude Code 附加 beta query/header",
+              "用户级 settings 覆盖本地 base URL"
+            ],
+            "evidence": [
+              "服务监听 127.0.0.1:18081",
+              "真实 CC 请求 200 OK",
+              "2026-10-22：新增 /api/v3/anthropic/v1/messages 别名，兼容 CC 2.1.308 的网关路径"
+            ],
+            "tags": [
+              "FastAPI",
+              "Messages",
+              "SSE"
+            ]
+          },
+          {
+            "id": "request-conversion",
+            "title": "Messages → GenAI 基础转换",
+            "priority": "critical",
+            "status": "done",
+            "summary": "转换 system、user/assistant 角色、文本、多轮内容和图片输入。",
+            "goal": [
+              "assistant 映射为 model",
+              "system 映射为 system_instruction",
+              "max_tokens 等字段映射到 GenerateContentConfig"
+            ],
+            "verify": [
+              "单轮、多轮、base64 图片、URL 图片单测",
+              "不支持的 block 明确报错而非静默丢弃"
+            ],
+            "acceptance": [
+              "顺序与角色不变",
+              "已支持字段值保持准确"
+            ],
+            "risks": [
+              "Claude 新增 content block 类型",
+              "隐式丢字段造成准确率问题"
+            ],
+            "evidence": [
+              "请求转换单元测试已通过"
+            ],
+            "tags": [
+              "转换",
+              "角色",
+              "system"
+            ]
+          },
+          {
+            "id": "response-conversion",
+            "title": "GenAI → Messages 基础转换",
+            "priority": "critical",
+            "status": "done",
+            "summary": "将候选文本、finish reason 和 token usage 转成 Messages 响应。",
+            "goal": [
+              "提取文本 content",
+              "映射 stop_reason",
+              "生成 Messages id/model/usage"
+            ],
+            "verify": [
+              "正常文本、max_tokens、缺失 candidates 单测",
+              "真实 CC 能解析 JSON/SSE"
+            ],
+            "acceptance": [
+              "回答内容完整",
+              "stop_reason 与 usage 不伪造、不丢失"
+            ],
+            "risks": [
+              "GenAI finish reason 新枚举",
+              "多 candidate 行为未定义"
+            ],
+            "evidence": [
+              "响应转换及 SSE 事件序列测试已通过"
+            ],
+            "tags": [
+              "转换",
+              "usage",
+              "stop_reason"
+            ]
+          },
+          {
+            "id": "real-single",
+            "title": "真实 CC 单轮文本",
+            "priority": "critical",
+            "status": "done",
+            "summary": "使用本机 Claude Code 2.1.142 完成一次真实端到端文本调用。",
+            "goal": [
+              "排除 curl/自制客户端模拟",
+              "验证 CC 原生 stream 请求",
+              "确认本地 settings 覆盖生效"
+            ],
+            "verify": [
+              "CC 输出指定文本",
+              "调试日志记录 /v1/messages",
+              "服务端返回 200"
+            ],
+            "acceptance": [
+              "退出码 0",
+              "stop_reason=end_turn",
+              "请求和响应均来自真实链路"
+            ],
+            "risks": [
+              "全局 Ark 配置抢占 ANTHROPIC_BASE_URL"
+            ],
+            "evidence": [
+              "输出：真实 Claude Code 链路成功",
+              "input 225 / output 10 tokens",
+              "2026-10-22（3.8-flash）：CC 请求已打到本地 /v1/messages；当前被服务端 AK 401 阻塞，待有效 AK 重验"
+            ],
+            "tags": [
+              "Claude Code",
+              "E2E"
+            ]
+          },
+          {
+            "id": "real-multiturn",
+            "title": "真实 CC 多轮文本",
+            "priority": "critical",
+            "status": "done",
+            "summary": "用 --resume 恢复同一 CC session，验证历史由 CC 真实携带。",
+            "goal": [
+              "第一轮写入唯一标记",
+              "第二轮不重复标记",
+              "第二轮依靠历史准确回答"
+            ],
+            "verify": [
+              "同一 session_id",
+              "两次 /v1/messages 200",
+              "session 文件角色顺序正确"
+            ],
+            "acceptance": [
+              "user→assistant→user→assistant 完整",
+              "第二轮正确返回 CC-MULTI-6F3A91"
+            ],
+            "risks": [
+              "把两个独立单轮误判成多轮"
+            ],
+            "evidence": [
+              "真实 session 四条消息已核验",
+              "第二轮 input tokens 增长"
+            ],
+            "tags": [
+              "多轮",
+              "resume",
+              "history"
+            ]
+          },
+          {
+            "id": "real-vlm",
+            "title": "真实 CC 单图 VLM",
+            "priority": "critical",
+            "status": "done",
+            "summary": "在 macOS Trae 终端粘贴 PNG，确认 CC 发出 base64 image block 并正确识图。",
+            "goal": [
+              "图片与文本同时进入 Messages",
+              "base64 图片映射为 GenAI inline_data",
+              "答案返回 CC"
+            ],
+            "verify": [
+              "session 中存在 image block",
+              "media_type=image/png",
+              "模型正确数出 3 条日志"
+            ],
+            "acceptance": [
+              "不是路径替代或 OCR 预填",
+              "真实图片数据进入请求且回答正确"
+            ],
+            "risks": [
+              "大图尺寸限制",
+              "多图顺序和不同 MIME 未验证"
+            ],
+            "evidence": [
+              "base64 data_length=89656",
+              "模型回答：3"
+            ],
+            "tags": [
+              "VLM",
+              "image/png",
+              "base64"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "protocol",
+        "code": "PHASE 02",
+        "title": "协议兼容与核心能力",
+        "subtitle": "先锁定当前端点的真实规则，再补齐工具、签名与流式语义",
+        "nodes": [
+          {
+            "id": "endpoint-contract",
+            "title": "端点协议兼容性",
+            "priority": "critical",
+            "status": "done",
+            "summary": "针对当前 gemini-3.8-flash 做真实协议探测，确定 id、并行工具、functionResponse 分组和 signature 的实际规则。",
+            "goal": [
+              "分别验证 functionCall/functionResponse 带 id 与不带 id",
+              "验证不同名与同名并行工具调用",
+              "验证顺序多步工具及多个 functionResponse 的 turn 分组",
+              "把端点差异固化为显式兼容配置"
+            ],
+            "verify": [
+              "每个场景都走真实 ModelHub，而非本地 mock",
+              "保留脱敏后的请求形态、HTTP 状态和响应结论",
+              "结果与现有文档中的旧端点差异对照"
+            ],
+            "acceptance": [
+              "明确当前端点对 id 的接受规则",
+              "并行同名调用结果不会错配",
+              "后续代码不再依靠猜测或单次成功判断协议"
+            ],
+            "risks": [
+              "旧文档描述的端点与当前端点可能不同",
+              "429/502 等瞬时错误不能误判为协议不支持",
+              "测试不得输出 AK"
+            ],
+            "evidence": [
+              "2026-10-23：R5 已补强回放最终答案/STOP/无额外工具、seed 与名称参数配对；Python/shell 三态退出码离线通过，历史线上结果未重跑",
+              "2026-10-22（3.8-flash）：with_id / without_id 回放均 PASS；端点同时接受带/不带 id 的工具历史",
+              "2026-10-22（3.8-flash）：同名并行 PASS；两次 lookup_item 唯一 ID，结果未错配（LEFT_OK / RIGHT_OK）",
+              "2026-10-22（3.8-flash）：连续两轮工具 PASS；两轮 ID 唯一，两轮均带 thoughtSignature",
+              "审查更正：提高输出预算后曾成功，但没有首跳与对照证据，504 根因仍未确认",
+              "审查更正：ID 回放未断言最终回答，历史 PASS 只表示请求被接受；完整契约验收需补强断言",
+              "2026-10-21：4-argon 历史结论（with_id/without_id/并行均 PASS），仅作对照",
+              "2026-10-21：真实 seed 请求成功，Argon 返回 functionCall.id 与 thoughtSignature",
+              "首次回放遇到 HTTP 429；有限退避重试后恢复，不将资源错误误判成协议错误",
+              "真实 with_id 回放：PASS",
+              "真实 without_id 回放：PASS",
+              "不同名并行工具：PASS；一次返回 lookup_alpha 与 lookup_beta，两个调用 ID 唯一",
+              "同名并行工具：PASS；两次 lookup_item 仍保持两个唯一调用 ID，结果未错配",
+              "两种并行场景都把两个 functionResponse 放在同一个 GenAI user turn 后成功闭环",
+              "实测两个 functionCall Part 中只有一个携带 thoughtSignature；实现必须按实际存在情况保存，不能假设每个调用都有签名",
+              "历史新增 3 个并行回归用例；本轮审查的现有测试为 28 个，全通过",
+              "连续两轮工具真实探针已就绪：强制 step_one→回传→step_two→回传→最终回答，并核验跨轮 ID 与 signature",
+              "连续两轮探针已在 3.8-flash 获得历史成功结果，本轮没有重新请求"
+            ],
+            "tags": [
+              "Argon",
+              "id",
+              "parallel tools",
+              "thoughtSignature"
+            ]
+          },
+          {
+            "id": "native-stream",
+            "title": "GenAI 原生增量流式",
+            "priority": "critical",
+            "status": "blocked",
+            "summary": "历史 4-argon 的原生流受限；3.8-flash 能力未确认。需实现显式 buffered/native 选择，不把历史权限错误推广到所有模型。",
+            "goal": [
+              "当前交付明确采用 generateContent + 缓冲式 Messages SSE",
+              "保留原生流式解析扩展点",
+              "ModelHub 开放接口后再重新验证"
+            ],
+            "verify": [
+              "当前 streamGenerateContent 真实请求返回 401 no model permission",
+              "generateContent 正常可用",
+              "Claude Code 能消费适配层输出的合法 SSE 事件"
+            ],
+            "acceptance": [
+              "本期不把缓冲式 SSE 描述成原生流式",
+              "只有上游返回多个真实 chunk 后才能解除阻塞",
+              "外部能力未开放不计为适配层未完成项"
+            ],
+            "risks": [
+              "首 token 必须等待上游完整响应",
+              "长回答的用户可见延迟较高",
+              "上游接口开放时间不由本项目控制"
+            ],
+            "evidence": [
+              "2026-10-21（4-argon）：SDK 调用 streamGenerateContent 返回 401 no model permission: gemini-4-argon",
+              "设计文档的 generate_content_stream 也标记为 Phase 2 未实现",
+              "当前可用方案：generateContent 完成后转换为 Anthropic SSE"
+            ],
+            "tags": [
+              "external-blocked",
+              "streamGenerateContent",
+              "buffered_sse"
+            ]
+          },
+          {
+            "id": "tool-definitions",
+            "title": "R2前置 · 本地鉴权已确认，任务配置待核对",
+            "priority": "critical",
+            "status": "active",
+            "summary": "STEP-048：已沿同一CLI入口用合成凭据和MockTransport核对，当前本地明确为URL查询ak、无Authorization；不是evals合并后选出的分支。正式框架基础配置/额外覆盖链已追踪，未见自动开启鉴权开关。按项目记录尚无本项目Merlin验收任务或最终配置快照，不能替任务下结论。最近真实结果仍401；本步不联网请求模型、不索取AK、不修改鉴权代码，R2线上待定。",
+            "goal": [
+              "JSON Schema 字段转换",
+              "tool_choice auto/any/指定工具映射",
+              "保留工具名称与描述"
+            ],
+            "verify": [
+              "单工具、多工具、嵌套 schema",
+              "不支持的 schema 关键字明确处理"
+            ],
+            "acceptance": [
+              "模型可看到并选择正确工具",
+              "schema 不被静默破坏"
+            ],
+            "risks": [
+              "两种协议 JSON Schema 支持范围不同"
+            ],
+            "evidence": [
+              "2026-10-22：已移除缩窄联合/静默删字段的清洗逻辑；复杂 Schema 走 parameters_json_schema",
+              "真实 SDK + MockTransport 验证同步/流式最终 HTTP 请求，保留引用、约束、false、null 与混合枚举",
+              "非字符串/空枚举避免 SDK 普通 Schema 的重新解释；非法 JSON 明确报错并隔离输入可变值",
+              "2026-10-23 STEP-040：R2 专项 6 tests / OK；额外 10 组 Schema × 同步/流式共 20 次最终请求断言 PASS，3 类非法 JSON 拒绝",
+              "覆盖递归引用、组合/条件、数值/字符串/数组约束、false/null/枚举、属性名及基础数组/null；未修改协议源码，也未请求模型",
+              "当前 editable SDK 下的离线保真已复验；目标卡片及其他 Gemini 卡片在线接受情况待验证，节点不标完成"
+            ],
+            "tags": [
+              "tools",
+              "schema",
+              "function calling"
+            ]
+          },
+          {
+            "id": "tool-use-response",
+            "title": "functionCall → tool_use",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "将 GenAI functionCall 响应转换为 Messages tool_use，并映射 stop_reason=tool_use。",
+            "goal": [
+              "生成稳定 tool_use id",
+              "参数保持 JSON 对象",
+              "SSE 支持 input_json_delta"
+            ],
+            "verify": [
+              "真实 CC 收到工具调用",
+              "CC 能识别工具名和参数",
+              "非流式与流式一致"
+            ],
+            "acceptance": [
+              "CC 实际执行预期工具",
+              "参数无截断或二次字符串化"
+            ],
+            "risks": [
+              "流式 JSON 参数拼接",
+              "并行工具调用顺序"
+            ],
+            "evidence": [
+              "真实 Claude Code 已成功收到 Bash tool_use 并执行",
+              "真实 ModelHub 已验证不同名与同名并行 functionCall；同名调用仍返回唯一 ID",
+              "并行返回中只有实际携带的 thoughtSignature 会进入缓存"
+            ],
+            "tags": [
+              "tool_use",
+              "functionCall",
+              "stop_reason"
+            ]
+          },
+          {
+            "id": "tool-result-loop",
+            "title": "tool_result 多轮闭环",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "把 CC 执行结果转换为 GenAI functionResponse，再让模型生成最终回答。",
+            "goal": [
+              "tool_use_id 与 function name 对应",
+              "文本/错误/图片结果处理",
+              "支持连续和并行工具调用"
+            ],
+            "verify": [
+              "真实 CC 文件读取闭环",
+              "工具失败后模型可恢复",
+              "第二次模型请求包含正确历史"
+            ],
+            "acceptance": [
+              "调用→执行→回传→最终答案完整",
+              "无死循环和 ID 错配"
+            ],
+            "risks": [
+              "CC 自带工具数量多",
+              "tool_result 内容类型复杂"
+            ],
+            "evidence": [
+              "真实 Bash 工具调用→执行→回传→最终回答已成功",
+              "不同名和同名并行工具均已完成双结果回传与最终回答闭环",
+              "当前还需验证连续两轮工具调用、失败恢复与压缩场景"
+            ],
+            "tags": [
+              "tool_result",
+              "loop",
+              "Claude Code"
+            ]
+          },
+          {
+            "id": "builtin-tools",
+            "title": "Google 内置工具策略",
+            "priority": "normal",
+            "status": "pending",
+            "summary": "明确 google_search 等内置工具如何与 CC 客户端工具共存、返回和展示。",
+            "goal": [
+              "区分 server tool 与 client tool",
+              "定义 grounding/citation 转换",
+              "避免同名工具冲突"
+            ],
+            "verify": [
+              "开启/关闭 google_search 对照",
+              "有无 grounding metadata",
+              "CC 最终文本与引用可用"
+            ],
+            "acceptance": [
+              "行为可配置",
+              "不会把内置工具误当成 CC 待执行工具"
+            ],
+            "risks": [
+              "ModelCard 默认 builtin_tools 改变行为"
+            ],
+            "tags": [
+              "google_search",
+              "server tools"
+            ]
+          },
+          {
+            "id": "thinking",
+            "title": "R3 后续 · 会话/模型签名隔离",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "处理 GenAI thought、thought_signature 与 Messages thinking/redacted_thinking 的对应及保留策略。",
+            "goal": [
+              "确认 includeThoughts=false 时实际响应",
+              "签名跨轮保留",
+              "CC 压缩后签名回填策略"
+            ],
+            "verify": [
+              "普通 reasoning 多轮",
+              "工具调用夹杂 thinking",
+              "签名缺失/过期/重复"
+            ],
+            "acceptance": [
+              "不泄露隐藏思维",
+              "需要的签名不丢失",
+              "跨轮请求不被上游拒绝"
+            ],
+            "risks": [
+              "这是准确率和稳定性高风险区域"
+            ],
+            "evidence": [
+              "基础 thoughtSignature 缓存与回传已通过单测和真实工具闭环",
+              "当前缓存仍是进程内全局字典，尚未达到生产要求",
+              "下一步骤：先核对 evals 契约与 ContextStore，再处理 R3 的会话/模型隔离；不默认扩成独立服务存储"
+            ],
+            "tags": [
+              "reasoning",
+              "signature",
+              "thinking"
+            ]
+          },
+          {
+            "id": "vlm-advanced",
+            "title": "VLM 多图与多轮",
+            "priority": "normal",
+            "status": "pending",
+            "summary": "扩展单图成功结果，验证多图顺序、图片后追问和混合工具场景。",
+            "goal": [
+              "多图+多文本顺序",
+              "VLM 会话 resume",
+              "PNG/JPEG/WebP 与尺寸边界"
+            ],
+            "verify": [
+              "两图对比问题",
+              "第二轮引用上一轮图片",
+              "超大图片错误映射"
+            ],
+            "acceptance": [
+              "顺序准确",
+              "不重复上传或丢图",
+              "失败信息可定位"
+            ],
+            "risks": [
+              "上下文体积快速增长"
+            ],
+            "tags": [
+              "VLM",
+              "multi-image",
+              "multi-turn"
+            ]
+          },
+          {
+            "id": "response-semantics",
+            "title": "R1 / R4 · 响应与异常链（离线通过）",
+            "priority": "critical",
+            "status": "active",
+            "summary": "R1 结束原因及 R4 异常链脱敏已离线修复，全量 42 项通过。HTTP 状态码和固定诊断类别保留，原始异常、响应正文与 URL 不外传；其余响应语义仍待验收。",
+            "goal": [
+              "end_turn/max_tokens/tool_use/stop_sequence",
+              "input/output/cache token 策略",
+              "4xx/5xx/error event 映射"
+            ],
+            "verify": [
+              "每个 stop reason 契约测试",
+              "超时、过载、资源耗尽",
+              "客户端显示可理解"
+            ],
+            "acceptance": [
+              "不把错误伪装成正常回答",
+              "usage 字段稳定且有来源"
+            ],
+            "risks": [
+              "上游错误文案不稳定",
+              "重试造成重复请求"
+            ],
+            "evidence": [
+              "2026-10-22：真实 SDK 响应对象的非流式/流式 MAX_TOKENS 均映射为 max_tokens；STOP 保持 end_turn",
+              "2026-10-23：R4 覆盖 APIError、HTTPError、缺失 message、SDK 异常响应、流中断及 fallback 失败",
+              "标准 traceback 与异常日志不含合成敏感标记，安全异常无原始 cause/context；R4 完成时全量 42 tests / OK",
+              "边界：不覆盖主动抓取 frame locals 或独立 HTTP 调试日志；没有新增模型调用；R5 随后也已离线修复"
+            ],
+            "tags": [
+              "errors",
+              "usage",
+              "finishReason"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stability",
+        "code": "PHASE 03",
+        "title": "稳定性与边界",
+        "subtitle": "针对长上下文、压缩、恢复和故障建立可信验证",
+        "nodes": [
+          {
+            "id": "forced-compact",
+            "title": "CC 强制 /compact",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "短会话中手动触发 CC 压缩，先观察压缩请求和摘要如何通过适配层。",
+            "goal": [
+              "压缩前埋唯一标记",
+              "执行 /compact",
+              "压缩后追问并检查请求 block"
+            ],
+            "verify": [
+              "日志出现真实 compaction",
+              "摘要进入后续请求",
+              "标记和关键约束可恢复"
+            ],
+            "acceptance": [
+              "压缩成功且会话继续",
+              "adapter 不因新 block 类型报错"
+            ],
+            "risks": [
+              "手动压缩不等同自动阈值触发"
+            ],
+            "tags": [
+              "/compact",
+              "summary",
+              "context"
+            ]
+          },
+          {
+            "id": "auto-compact",
+            "title": "CC 自动压缩",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "逐步增加真实上下文，直到 autocompact 从 level=ok 进入执行状态。",
+            "goal": [
+              "构造可核验长上下文",
+              "记录触发点与 effectiveWindow",
+              "压缩前后信息抽样核对"
+            ],
+            "verify": [
+              "至少一次自动触发",
+              "多次 resume 稳定",
+              "关键系统约束不丢"
+            ],
+            "acceptance": [
+              "无 400/死循环/上下文爆炸",
+              "压缩后回答准确率可接受"
+            ],
+            "risks": [
+              "耗时和 token 成本高",
+              "阈值可能随 CC 版本变化"
+            ],
+            "tags": [
+              "autocompact",
+              "180K",
+              "long context"
+            ]
+          },
+          {
+            "id": "continuation",
+            "title": "长输出 continuation_token",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "独立验证 Gemini 4 Argon 长解码的 continuation token；它与 CC 上下文压缩不是同一机制。",
+            "goal": [
+              "超过 32K 输出观察 token",
+              "模拟流中断",
+              "从最近有效 checkpoint 恢复"
+            ],
+            "verify": [
+              "不中断基线",
+              "中途断连恢复",
+              "非最后 token 恢复"
+            ],
+            "acceptance": [
+              "恢复后内容连续且不重复",
+              "token 生命周期和选择策略明确"
+            ],
+            "risks": [
+              "超长测试昂贵",
+              "SDK 自动续传行为需与服务重连协同"
+            ],
+            "tags": [
+              "continuation_token",
+              "long output",
+              "recovery"
+            ]
+          },
+          {
+            "id": "retry-timeout",
+            "title": "超时、重试与幂等",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "针对 overloaded、internal error、resource exhausted 等配置化重试，并避免重复副作用。",
+            "goal": [
+              "连接/首 token/总时长分层超时",
+              "指数退避与次数上限",
+              "工具场景禁止盲重试"
+            ],
+            "verify": [
+              "故障注入",
+              "可重试关键词命中",
+              "重试耗尽后的标准错误"
+            ],
+            "acceptance": [
+              "无无限等待",
+              "无工具重复执行",
+              "日志可解释每次重试"
+            ],
+            "risks": [
+              "生成请求不天然幂等"
+            ],
+            "tags": [
+              "retry",
+              "timeout",
+              "idempotency"
+            ]
+          },
+          {
+            "id": "compat-probes",
+            "title": "CC 辅助接口与版本兼容",
+            "priority": "normal",
+            "status": "active",
+            "summary": "处理或明确 HEAD、count_tokens、模型探测及 beta header 等 CC 行为。",
+            "goal": [
+              "记录 CC 实际请求面",
+              "判断 404 是否无害",
+              "必要时补 count_tokens"
+            ],
+            "verify": [
+              "启动、单轮、交互、工具四类流程抓取",
+              "不同 CC 版本 smoke"
+            ],
+            "acceptance": [
+              "无误导性模型不存在提示",
+              "升级前有兼容检查"
+            ],
+            "risks": [
+              "CC 客户端行为随版本变化"
+            ],
+            "evidence": [
+              "2026-10-22：CC 2.1.308 在 base URL 含 /api/v3/anthropic 时请求 /api/v3/anthropic/v1/messages，服务已加别名",
+              "2026-10-22：CC 2.1.308 的全局 ~/.claude/settings.json 会覆盖 shell 环境变量，联调必须用 --settings 临时配置",
+              "2026-10-22：路径 404 会被 CC 误报为“模型不存在”，需靠 debug 日志区分路径/鉴权/模型问题"
+            ],
+            "tags": [
+              "count_tokens",
+              "beta",
+              "compatibility"
+            ]
+          },
+          {
+            "id": "regression",
+            "title": "R5 · 探针验收（离线通过）",
+            "priority": "critical",
+            "status": "active",
+            "summary": "共享协议回归加按模型配置矩阵，分别记录 Gemini 卡片的离线结果与真实 smoke；3.8 的 PASS 不自动代表其他模型。",
+            "goal": [
+              "共享转换纯函数与 HTTP/SSE 契约测试",
+              "至少两套合成模型配置覆盖默认值/覆盖规则与最终 SDK 参数",
+              "按具体模型、配置版本、SDK 来源记录真实 CC smoke"
+            ],
+            "verify": [
+              "字段保真与模型配置差异分别断言",
+              "thinking/token/工具等设置不串用或静默丢失",
+              "限流与权限受限保留待验收，测试不包含真实 AK"
+            ],
+            "acceptance": [
+              "已支持卡片通过对应核心矩阵",
+              "未测卡片不标 PASS，记录能力边界与待验收项"
+            ],
+            "risks": [
+              "只测 happy path",
+              "真实服务测试不稳定"
+            ],
+            "evidence": [
+              "2026-10-23：R5 最终回答断言、seed/参数配对、Python 入口及 shell 聚合已离线通过",
+              "PASS=0 / FAIL=1 / INCONCLUSIVE=2；FAIL 优先，空 case 不得成功，重复场景去重避免覆盖",
+              "全量 55 tests / OK；历史线上探针未重跑，当前模型与 Merlin 验收仍独立待办"
+            ],
+            "tags": [
+              "tests",
+              "contract",
+              "smoke"
+            ]
+          },
+          {
+            "id": "observability",
+            "title": "日志、指标与安全",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "记录足够的链路信息用于 oncall，同时对 AK、图片和完整 prompt 做脱敏。",
+            "goal": [
+              "request id 和阶段耗时",
+              "状态码/重试/stop reason 指标",
+              "内容类型与数量而非敏感正文"
+            ],
+            "verify": [
+              "成功与失败链路均可追踪",
+              "日志扫描无 AK/base64",
+              "并发请求可区分"
+            ],
+            "acceptance": [
+              "问题能在日志中定位阶段",
+              "敏感数据不落盘"
+            ],
+            "risks": [
+              "为了排障过度记录用户内容"
+            ],
+            "evidence": [
+              "2026-10-23：R4 标准异常链/日志脱敏离线通过；整体链路指标和日志安全验收仍待完成"
+            ],
+            "tags": [
+              "logging",
+              "metrics",
+              "redaction"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "delivery",
+        "code": "PHASE 04",
+        "title": "evals 合入与 Merlin 验证",
+        "subtitle": "本地验证后通过 Git 合入 evals，再由用户在 Merlin 发任务验收",
+        "nodes": [
+          {
+            "id": "configuration",
+            "title": "Gemini 系列 ModelCard 配置兼容",
+            "priority": "critical",
+            "status": "active",
+            "summary": "本地新增ModelCardProfile内存注入入口与无AK示例卡；已验证3.8卡片最终参数、两模型配置隔离和运行时覆盖。未知字段/未实现签名裁剪明确拒绝，extension和重试关键词仅作元数据。正式evals/Merlin仍需框架父类/注册接入，不在任务中getpass；73项离线通过不是系列在线验收。",
+            "goal": [
+              "对齐 evals ModelCard 与运行时参数优先级",
+              "按卡片读取模型、端点、token/采样默认值、thinking、内置工具与函数调用设置",
+              "流式、工具 ID 与签名策略按已验证能力配置，不凭型号猜测",
+              "新模型通过配置与回归接入，凭据只在运行时提供"
+            ],
+            "verify": [
+              "至少两套合成模型配置：相同 Messages 输入共用转换逻辑，最终 SDK 参数按卡片变化",
+              "静态默认值/运行时覆盖与 false/0/缺省值边界",
+              "不支持或冲突设置明确报错，配置及凭据来源可追溯",
+              "在线结果绑定具体模型/配置/SDK；资源限制保留待验收"
+            ],
+            "acceptance": [
+              "切换已支持模型无需修改公共转换函数",
+              "模型设置不串用、不静默丢失，签名会话与模型隔离",
+              "3.8 与 Gemini 4 分别记录覆盖范围，未验证项不标 PASS",
+              "新环境可复现安装与启动，AK 不写入文件"
+            ],
+            "risks": [
+              "仅替换 URL 不能保证 thinking/token/工具等设置生效",
+              "资源限流不等于能力不支持",
+              "历史成功或一个模型 PASS 不代表全系列验收"
+            ],
+            "evidence": [
+              "2026-10-22：用户确认上线兼容目标为 Gemini 系列；当前选用 3.8-flash 仅为开发验证安排",
+              "2026-10-23 STEP-045：本地ModelCardProfile及按卡片探针已实现；两模型配置隔离和实际SDK普通/流式最终参数离线通过，当前73项回归通过。正式evals注册/父类和R3仍待核对，本节点不标完成",
+              "2026-10-22：模型名与端点收敛到 src/cc_genai_adapter/target.py，6 个脚本统一导入",
+              "2026-10-22：AK 来源为 getpass 或 MODELHUB_SEARCH_GPT_AK，启动时打印 length + sha256 自检（不打印内容）",
+              "2026-10-22：当前不解析 ModelCard；未应用卡片 thinkingConfig / builtin_tools / token 默认值，但 CC 请求 max_tokens 已映射",
+              "交付流程：复用 evals 配置与上下文机制，Git 提交后由用户在 Merlin 验证",
+              "审查发现：服务优先读取非空环境变量，可能跳过隐藏输入；401 来源尚未实证，不能凭长度判断 AK 失效",
+              "2026-10-22：换模型仍需改 target.py 并重启服务，尚未做到纯配置切换",
+              "旁路参考：他人正在试验直连 ModelHub 的可行性，示例为 /v1/messages + x-api-key + anthropic-version + x-provider-session-id",
+              "示例响应包含 redacted_thinking 与 text(Pong)，目前只证明该试验的单轮文本请求成功",
+              "对方回复明确为“我先试一下可行性，没事你干就完事了”：主线适配任务继续，不等待也不切换方案",
+              "该结果仅作为未来对照样例；在对方给出可复用结论前，不视为现成生产能力",
+              "本机 Claude Code 2.1.308 支持 ANTHROPIC_BASE_URL、ANTHROPIC_API_KEY、ANTHROPIC_AUTH_TOKEN、ANTHROPIC_CUSTOM_HEADERS",
+              "本机全局 settings 保持现状，不因联调而修改"
+            ],
+            "tags": [
+              "ModelCard",
+              "config",
+              "secrets",
+              "Claude Code settings"
+            ]
+          },
+          {
+            "id": "staging",
+            "title": "Merlin 任务验收",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "evals 合入后由用户在 Merlin 发起任务，核对实际代码 commit、配置与运行结果。",
+            "goal": [
+              "验证本地到 evals 的调用入口",
+              "固定 commit、SDK 与 ModelCard 配置",
+              "文本/VLM/工具/流式任务矩阵"
+            ],
+            "verify": [
+              "用户启动 Merlin smoke/正式任务",
+              "记录任务链接、commit、配置与结果",
+              "失败分类与定向回归"
+            ],
+            "acceptance": [
+              "目标任务环境可以复现",
+              "相关能力与实际任务结果达到验收标准"
+            ],
+            "risks": [
+              "本地 PASS 不能替代 Merlin 结果",
+              "Mac 路径或 editable 依赖未进入任务环境"
+            ],
+            "tags": [
+              "Merlin",
+              "evals",
+              "E2E",
+              "acceptance"
+            ]
+          },
+          {
+            "id": "accuracy",
+            "title": "真实任务与准确率验证",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "使用真实 Claude Code 工作负载验证不只是能回答，还要保证工具选择、上下文和结果质量。",
+            "goal": [
+              "代码理解/修改/测试任务",
+              "多轮与压缩任务",
+              "失败案例人工归因"
+            ],
+            "verify": [
+              "与直接基线对照",
+              "协议丢失导致的质量问题单列",
+              "重复运行观察稳定性"
+            ],
+            "acceptance": [
+              "达到约定可用门槛",
+              "无系统性字段丢失"
+            ],
+            "risks": [
+              "只看 HTTP 成功率会掩盖准确率问题"
+            ],
+            "evidence": [
+              "用户建议 PayerBench、MM-ToolSandBox 少量验证文本多轮与多模态；先各1个短case检查路由，跑通后再扩到3–5例",
+              "本地发现PaperBench Detail候选，是否对应PayerBench待确认；MM-ToolSandBox入口未定位。需确认collection/exercise且模型请求实际经过适配器，尚未提交或运行Merlin任务"
+            ],
+            "tags": [
+              "accuracy",
+              "real tasks",
+              "evaluation"
+            ]
+          },
+          {
+            "id": "load",
+            "title": "性能与容量",
+            "priority": "normal",
+            "status": "pending",
+            "summary": "测量 TTFT、总延迟、并发、错误率和资源占用，确定安全运行参数。",
+            "goal": [
+              "单请求基线",
+              "并发梯度",
+              "长流式连接与资源回收"
+            ],
+            "verify": [
+              "P50/P95 延迟",
+              "不同并发错误率",
+              "连接中断无泄漏"
+            ],
+            "acceptance": [
+              "容量边界明确",
+              "超限时可快速失败或排队"
+            ],
+            "risks": [
+              "上游限流与本地瓶颈混淆"
+            ],
+            "tags": [
+              "performance",
+              "concurrency",
+              "TTFT"
+            ]
+          },
+          {
+            "id": "gray-release",
+            "title": "Git 合入与版本回退",
+            "priority": "critical",
+            "status": "pending",
+            "summary": "本地验证后在 evals 的正式 checkout 提交功能分支/MR，为 Merlin 验证提供可追溯版本。",
+            "goal": [
+              "明确目标仓库、分支与接入入口",
+              "提交核心代码、依赖与集成测试",
+              "保留上一个可用 commit"
+            ],
+            "verify": [
+              "目标仓库检查通过",
+              "MR 与 commit 可追踪",
+              "Merlin 配置引用对应版本"
+            ],
+            "acceptance": [
+              "无需拷贝本机目录即可运行",
+              "失败可以回到已知可用版本"
+            ],
+            "risks": [
+              "导出参考包不能直接当正式 checkout",
+              "提交缺少运行依赖或错误入口"
+            ],
+            "tags": [
+              "Git",
+              "MR",
+              "evals",
+              "commit",
+              "rollback"
+            ]
+          },
+          {
+            "id": "runbook",
+            "title": "Runbook 与已知限制",
+            "priority": "normal",
+            "status": "pending",
+            "summary": "沉淀启动、验证、故障定位、常见错误、升级检查和当前不支持项。",
+            "goal": [
+              "值班排查步骤",
+              "错误码/日志关键词",
+              "CC/SDK 升级回归清单"
+            ],
+            "verify": [
+              "由非开发者按文档完成一次排障",
+              "每个已知限制有影响和兜底"
+            ],
+            "acceptance": [
+              "oncall 不依赖口头知识",
+              "文档与当前版本一致"
+            ],
+            "risks": [
+              "代码变化后文档失效"
+            ],
+            "tags": [
+              "runbook",
+              "oncall",
+              "docs"
+            ]
+          }
+        ]
+      }
+    ]
+  }
 };
+(function () {
+  const archived = window.MISSION;
+  const makeNode = (node) => ({
+    priority: "critical",
+    recommended: false,
+    sourceIds: [],
+    goal: [],
+    pending: [],
+    verify: [],
+    acceptance: [],
+    risks: [],
+    evidence: [],
+    tags: [],
+    badges: [],
+    ...node,
+  });
+
+  window.MISSION = {
+    meta: {
+      title: "CC × GenAI 本地适配进度",
+      subtitle: "本地协议实现 → 本地验证 → 本地交付",
+      updated: "2026-10-24",
+      revision: "local-only-usage-20261024",
+      totalNodes: 9,
+      phases: 3,
+      currentModel: "gemini-3.8-flash",
+      offlineTests: 246,
+      nextWork: "处理 partialArgs / willContinue：未完成工具参数必须明确拒绝",
+      focusNode: "partial-tool-args",
+    },
+    constraints: [
+      {
+        level: "note",
+        title: "当前交付范围 · 只做本地",
+        text: "当前不合入 evals、不上 Merlin。目标是本地完成 Messages ↔ GenAI 适配，并用本地 Claude Code 做真实链路验收后交付。",
+      },
+      {
+        level: "note",
+        title: "最新离线基线 · 246 项通过",
+        text: "有序 text/tool/text 和流式 usage/cache 已完成并纳入全量回归。246 项仅证明离线实现，不代表当前 3.8-flash 真实 CC 已验收。",
+      },
+      {
+        level: "note",
+        title: "真实调用边界",
+        text: "401 调查当前不作为开发主线；历史 4-argon 真实成功与 3.8 工具探针均保留，但不能替代当前配置下的完整 CC 验收。",
+      },
+    ],
+    execution: {
+      kicker: "CURRENT FOCUS",
+      title: "当前只推进一个收口点",
+      roundLabel: "N2 第三小步",
+      note: "先把未完成工具参数的边界做对，再决定是否实现增量参数拼装；不把 partialArgs 静默变成空对象。",
+      state: "有序内容输出与 usage/cache 已收口；当前下一项是 partialArgs/willContinue。完成后再按真实 CC 所需补工具图片、thinking/signature 边界。",
+      rule: "每个节点分别记录实现、离线证据和真实 CC 结果。离线通过不会自动点亮真实验证节点。",
+      cards: [
+        {
+          owner: "主窗口",
+          nodeId: "partial-tool-args",
+          taskIds: ["partial-tool-args-reject"],
+        },
+      ],
+    },
+    phases: [
+      {
+        id: "local-foundation",
+        code: "PHASE 01",
+        title: "基础适配与配置",
+        subtitle: "先保证本地服务和测试脚本走同一份模型配置，基础双向转换可回归",
+        nodes: [
+          makeNode({
+            id: "local-config",
+            title: "本地模型配置统一",
+            status: "done",
+            progress: "已完成 · 服务与脚本统一读取配置",
+            implementation: "服务和测试脚本统一读取 configs/gemini-3.8-flash.modelcard.json，并可用 --config 指定其他非敏感配置。",
+            offline: "配置加载与三条调用路径已有离线覆盖。",
+            live: "当前 3.8-flash 完整真实 CC 验收尚未执行。",
+            summary: "配置已经从散落常量收口到本地模型配置文件；AK仍只允许运行时注入，不写入配置、源码或日志。",
+            goal: ["统一URL、模型、generationConfig、toolConfig和内置工具来源", "保留Gemini型号差异，不把3.8配置硬套到Gemini 4"],
+            pending: ["真实 CC 验收时确认启动命令确实加载指定配置"],
+            verify: ["配置解析、覆盖优先级和三条调用路径离线断言"],
+            acceptance: ["服务和测试脚本不再各用一套配置", "配置文件不含AK"],
+            risks: ["ModelCard是本地配置文件名称，不是独立平台接入目标"],
+            evidence: ["STEP-073：本地配置读取已统一", "当前开发目标模型为gemini-3.8-flash"],
+            tags: ["config", "3.8-flash", "Gemini系列"],
+            badges: ["配置已统一", "AK不落盘", "实测待验"],
+            sourceIds: ["modelcard", "configuration"],
+            cardSummary: "本地服务与测试脚本已统一读取同一份模型配置。",
+          }),
+          makeNode({
+            id: "base-conversion",
+            title: "Messages ↔ GenAI 基础转换",
+            status: "done",
+            progress: "基础范围已完成 · 离线有覆盖",
+            implementation: "system、user、assistant、文本、多轮历史、基础工具调用与响应结束原因已实现。",
+            offline: "R1、R2、R4、R5及基础路由回归已覆盖。",
+            live: "历史真实记录保留；当前3.8-flash完整CC矩阵待验。",
+            summary: "基础请求和响应转换已经具备；这表示支持范围内的实现完成，不等于所有扩展字段或当前模型端到端完成。",
+            goal: ["Messages请求转为GenAI contents/config", "GenAI响应转为Messages JSON或SSE", "保留角色、顺序、工具ID和明确错误边界"],
+            pending: ["扩展工具参数、多模态工具结果和thinking/signature继续按节点收口"],
+            verify: ["同步、buffered stream、native stream三路径离线回归"],
+            acceptance: ["支持字段不静默丢失或错配", "不支持形态明确拒绝"],
+            risks: ["历史模型成功不能自动迁移到3.8-flash"],
+            evidence: ["R1 FinishReason、R2复杂Schema、R4脱敏、R5探针退出码均已有离线修复", "包含在当前246项全量离线基线"],
+            tags: ["Messages", "GenAI", "text", "multi-turn", "tools"],
+            badges: ["基础实现完成", "离线有覆盖", "实测待验"],
+            sourceIds: ["text-conversion", "tools", "errors"],
+            cardSummary: "基础文本、多轮、工具与响应转换已经可回归。",
+          }),
+        ],
+      },
+      {
+        id: "protocol-closeout",
+        code: "PHASE 02",
+        title: "协议正确性收口",
+        subtitle: "逐项消除会影响Claude Code理解结果的静默错误",
+        nodes: [
+          makeNode({
+            id: "ordered-content",
+            title: "响应内容顺序",
+            status: "done",
+            progress: "已完成 · text → tool → text顺序保留",
+            implementation: "响应转换保留逐part顺序，SSE按原始次序打开和关闭文本、工具内容块。",
+            offline: "字典对象、真实Google SDK对象、buffered/native路由均已覆盖。",
+            live: "当前模型真实混合输出仍待最终CC验收。",
+            summary: "修复了原先把工具前后文本拼接到一起、再统一输出工具块的重排问题。",
+            goal: ["按模型原始part顺序输出text和tool_use"],
+            verify: ["直接SSE断言索引0/1/2分别为text/tool/text"],
+            acceptance: ["before/tool/after不被重排成beforeafter/tool"],
+            risks: ["离线顺序正确不代表模型一定生成该组合"],
+            evidence: ["STEP-075：全量242 tests / 2.641s / OK"],
+            tags: ["SSE", "ordering", "tool_use"],
+            badges: ["STEP-075", "242项基线", "离线完成"],
+            sourceIds: ["streaming", "tool-use-response"],
+            cardSummary: "混合文本与工具块保持原始发生顺序。",
+          }),
+          makeNode({
+            id: "stream-usage",
+            title: "流式 usage 与缓存分项",
+            status: "done",
+            progress: "已完成 · 尾片可累计校正usage",
+            implementation: "promptTokenCount拆分普通输入和cache read，输出计入candidate+thought；流式使用最新累计快照。",
+            offline: "真实SDK usage对象、本地路由、buffered/native及非法元数据均已覆盖。",
+            live: "当前3.8-flash真实流仍待CC验收。",
+            summary: "修复了首片无usage、尾片才给完整统计时无法回传，以及缓存token被重复算入input的问题。",
+            goal: ["正确映射input/cache/output", "显式0与字段缺失分开处理", "尾片usage覆盖早期累计值"],
+            verify: ["专项55项通过", "最终全量离线回归246项通过"],
+            acceptance: ["usage不跨chunk求和导致翻倍", "非法负数和cached大于prompt明确失败"],
+            risks: ["246项仍是离线回归，不是当前模型真实用量对账"],
+            evidence: ["STEP-077：55项专项 / 0.275s / OK", "STEP-077：246 tests / 2.598s / OK"],
+            tags: ["usage", "cache", "streaming", "SSE"],
+            badges: ["STEP-077", "246项通过", "离线完成"],
+            sourceIds: ["streaming", "response-semantics"],
+            cardSummary: "流式尾片usage与缓存token分项已经正确映射。",
+          }),
+          makeNode({
+            id: "partial-tool-args",
+            title: "未完成工具参数边界",
+            status: "active",
+            progress: "下一步 · 先显式拒绝partialArgs/willContinue",
+            implementation: "尚未修复；当前风险是SDK partial_args可能被误当成空参数工具调用。",
+            offline: "待补红测试和三路径回归。",
+            live: "修复前不做该形态的真实成功声明。",
+            summary: "当前优先项：不能把尚未完成的工具参数静默转换成{}并交给Claude Code执行。先明确拒绝，再决定是否需要实现跨chunk组装。",
+            goal: ["识别partialArgs/willContinue", "未实现组装时明确失败，不产生伪造tool_use"],
+            pending: ["补真实SDK形态红测试", "实现同步、buffered、native一致拒绝", "跑专项和全量离线回归"],
+            verify: ["断言不会输出空参数工具块", "错误对外脱敏且内部可分类"],
+            acceptance: ["未完成参数不会进入工具执行", "三条响应路径行为一致"],
+            risks: ["是否需要真正增量组装，要根据SDK事件和CC场景另行决定"],
+            evidence: ["STEP-071只读诊断已发现旧行为风险；尚未形成完成证据"],
+            tags: ["partialArgs", "willContinue", "tool_use"],
+            badges: ["当前焦点", "待红测试", "未完成"],
+            sourceIds: ["tool-use-response", "streaming"],
+            recommended: true,
+            cardSummary: "防止未完成工具参数被误执行，是当前唯一开发焦点。",
+            workItems: [
+              {
+                id: "partial-tool-args-reject",
+                title: "partialArgs/willContinue显式拒绝",
+                owner: "主窗口",
+                status: "active",
+                work: "先用红测试固定风险，再让同步、buffered和native三条路径明确拒绝未完成参数。",
+                acceptance: "不生成空对象tool_use；错误可分类、对外不泄露内部数据；全量离线回归通过。",
+                evidence: "尚未完成；当前只有STEP-071只读诊断。",
+              },
+            ],
+            completionRule: "红测试先失败、修复后专项与全量通过，并在日志中记录支持边界；否则保持进行中。",
+          }),
+          makeNode({
+            id: "advanced-boundaries",
+            title: "工具图片与 thinking/signature",
+            status: "active",
+            progress: "部分完成 · 按真实CC需要继续收口",
+            implementation: "普通图片输入、签名隔离/TTL和历史安全匹配已有基础；媒体tool_result与请求端thinking块边界仍未完整。",
+            offline: "签名隔离、多图/图片历史已有离线覆盖；扩展形态待补。",
+            live: "当前配置下的工具图片与签名连续对话待验。",
+            summary: "这里集中处理基础转换之外的高级边界，避免把它们混入已经完成的文本/usage节点。",
+            goal: ["工具返回图片可按明确协议处理", "thinking/redacted_thinking与签名只在可信作用域回填", "压缩或ID重用时不误配"],
+            pending: ["媒体tool_result支持或明确不支持", "请求端thinking/redacted_thinking边界", "按实际CC会话验证signature续接"],
+            verify: ["同会话/跨会话、模型、路由隔离", "图片工具结果后的继续回答"],
+            acceptance: ["不串签名、不泄露隐藏思维", "图片不会被静默丢弃"],
+            risks: ["无真实CC需求证据时不扩展成独立生产网关"],
+            evidence: ["历史R3隔离/TTL和多模态离线矩阵保留在历史区", "当前246项基线未宣称覆盖全部高级形态"],
+            tags: ["multimodal", "tool_result", "thinking", "signature"],
+            badges: ["基础已有", "扩展待补", "实测待验"],
+            sourceIds: ["signature", "multimodal"],
+            cardSummary: "高级多模态与签名边界仍需按真实CC场景收口。",
+          }),
+        ],
+      },
+      {
+        id: "local-validation-delivery",
+        code: "PHASE 03",
+        title: "本地验证与交付",
+        subtitle: "离线回归、当前模型真实CC验收、最后整理本地交付物",
+        nodes: [
+          makeNode({
+            id: "offline-regression",
+            title: "全量离线回归",
+            status: "active",
+            progress: "当前246项通过 · 最终收口后还需重跑",
+            implementation: "当前变更已通过统一unittest全量回归。",
+            offline: "246 tests / 2.598s / OK。",
+            live: "离线回归不涉及ModelHub或真实CC。",
+            summary: "这是当前代码健康基线，不是最终完成率；后续每个协议修复都必须回归，功能收口后再做最终一次。",
+            goal: ["所有既有转换、服务、流式、签名和多模态测试不回退"],
+            pending: ["partialArgs修复后重跑", "高级边界收口后最终重跑"],
+            verify: ["PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -q"],
+            acceptance: ["最终支持范围全部通过且无未解释失败"],
+            risks: ["Mock/离线SDK对象不能冒充真实模型通过"],
+            evidence: ["STEP-077：最终246项 / 2.598s / OK"],
+            tags: ["unittest", "offline", "regression"],
+            badges: ["246项通过", "当前基线", "非真实验收"],
+            sourceIds: ["offline-regression", "regression"],
+            cardSummary: "当前全量246项离线通过；功能收口后仍需最终回归。",
+          }),
+          makeNode({
+            id: "real-cc-validation",
+            title: "当前3.8-flash真实CC验收",
+            status: "pending",
+            progress: "待协议收口后执行",
+            implementation: "本地/v1/messages服务和临时CC配置已有基础。",
+            offline: "离线服务路由已有覆盖。",
+            live: "当前3.8-flash尚未完成单轮、多轮、工具、图片、流式的完整验收。",
+            summary: "使用真实Claude Code经本地服务调用ModelHub，逐场景确认请求转换、响应转换和CC行为。历史成功只作参考。",
+            goal: ["单轮文本", "多轮文本", "工具闭环与最终答案", "图片/VLM", "流式事件与usage"],
+            pending: ["协议收口完成", "使用当前本地配置启动服务", "按场景保存脱敏结果"],
+            verify: ["Claude Code真实发起/v1/messages", "ModelHub真实返回", "CC最终显示或执行工具后继续"],
+            acceptance: ["每个场景有当前模型、当前代码、当前配置的可复核证据"],
+            risks: ["历史4-argon和旧3.8探针不能替代本节点", "凭据只在运行时输入，不落盘"],
+            evidence: ["尚未形成当前配置的完整验收证据"],
+            tags: ["Claude Code", "ModelHub", "E2E", "3.8-flash"],
+            badges: ["待执行", "真实链路", "AK不落盘"],
+            sourceIds: ["real-cc", "complex-context"],
+            cardSummary: "最终必须由真实CC走完整本地链路，而不是脚本模拟。",
+          }),
+          makeNode({
+            id: "local-handoff",
+            title: "本地交付包",
+            status: "pending",
+            progress: "待真实CC验收后整理",
+            implementation: "README与agent日志持续维护，最终交付尚未冻结。",
+            offline: "待最终全量回归结果。",
+            live: "待附当前3.8-flash真实CC验证结果。",
+            summary: "交付本地代码、启动说明、测试结果和已知限制；不包含evals合入或Merlin任务。",
+            goal: ["可运行代码", "启动/配置说明", "离线与真实验证清单", "已知限制和回滚说明"],
+            pending: ["完成前两阶段剩余节点", "冻结最终支持范围", "整理可复核证据"],
+            verify: ["按说明从干净终端启动并执行最小验收"],
+            acceptance: ["接手者能在本地复现已声明能力", "未完成项不伪装成支持"],
+            risks: ["不要把内部日志、AK或完整用户数据放入交付包"],
+            evidence: ["README/HANDOFF/EVIDENCE持续更新中，尚未最终冻结"],
+            tags: ["handoff", "runbook", "local-only"],
+            badges: ["待整理", "本地交付", "不上Merlin"],
+            sourceIds: ["runbook", "git-merge", "merlin-validation"],
+            cardSummary: "最后交付本地代码、说明、结果和已知限制。",
+          }),
+        ],
+      },
+    ],
+    history: [
+      {
+        title: "2026-10-24 · 最新协议收口",
+        scope: "STEP-075 / STEP-077 · 离线证据",
+        items: [
+          "text → tool → text响应顺序已修复，STEP-075全量242项通过。",
+          "流式usage尾片与缓存分项已修复，STEP-077专项55项、最终全量246项通过。",
+          "下一步是partialArgs/willContinue显式拒绝；尚未实现。",
+          "以上均未调用ModelHub，不是当前3.8-flash真实CC验收。",
+        ],
+      },
+      ...archived.history,
+    ],
+    legacyPhases: archived.legacyPhases,
+    migration: archived.migration,
+    localHistorySnapshot: archived.localHistorySnapshot,
+  };
+})();
+const mission = window.MISSION;
+
 const phases = mission.phases;
 const STORAGE_KEY = "cc-genai-personal-marks-v3";
 const marks = loadMarks();
@@ -2128,7 +3486,7 @@ function workItemsSection(node) {
 }
 function renderExecution() {
   const plan=mission.execution;
-  document.querySelector("#execution").innerHTML='<div class="execution-heading"><div><p class="kicker">ONE ROADMAP · THREE OWNERS</p><h2 id="execution-title">'+esc(plan.title)+'</h2></div><span class="round-state">'+esc(plan.roundLabel || "本轮已收尾")+'</span></div><p class="execution-note">'+esc(plan.note)+'</p><div class="execution-grid">'+plan.cards.map(card=>{
+  document.querySelector("#execution").innerHTML='<div class="execution-heading"><div><p class="kicker">'+esc(plan.kicker || "CURRENT EXECUTION")+'</p><h2 id="execution-title">'+esc(plan.title)+'</h2></div><span class="round-state">'+esc(plan.roundLabel || "本轮已收尾")+'</span></div><p class="execution-note">'+esc(plan.note)+'</p><div class="execution-grid">'+plan.cards.map(card=>{
     const node=allNodes().find(n=>n.id===card.nodeId);
     const items=node.workItems.filter(item=>card.taskIds.includes(item.id));
     return '<article class="execution-card"><div class="execution-owner">'+esc(card.owner)+'<span class="'+(items.every(item=>item.status==="done")?"accepted":"working")+'">'+(items.every(item=>item.status==="done")?"✓ 本轮子项本地验收通过":items.some(item=>item.status==="active")?"本轮执行中 · 待验收":"已安排 · 待开始")+'</span></div><button type="button" class="execution-link" data-open-node="'+esc(node.id)+'"><span>'+esc(node.number)+'</span>'+esc(node.title)+'<b aria-hidden="true">↗</b></button><p class="execution-task">'+items.map(item=>esc(item.title)).join("；")+'</p><p class="execution-boundary"><b>父节点仍部分完成</b> · 点击查看剩余工作与验收标准</p></article>';
@@ -2223,4 +3581,4 @@ renderOverview();
 renderExecution();
 renderHistory();
 render();
-selectNode("signature");
+selectNode(mission.meta.focusNode || allNodes().find(node=>node.recommended)?.id || allNodes()[0]?.id);
