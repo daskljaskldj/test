@@ -3157,6 +3157,8 @@ window.MISSION = {
     ]
   }
 };
+
+
 (function () {
   const archived = window.MISSION;
   const makeNode = (node) => ({
@@ -3179,12 +3181,12 @@ window.MISSION = {
       title: "CC × GenAI 本地适配进度",
       subtitle: "本地协议实现 → 本地验证 → 本地交付",
       updated: "2026-10-24",
-      revision: "local-only-partial-args-20261024",
+      revision: "local-only-tool-result-media-20261024",
       totalNodes: 9,
       phases: 3,
       currentModel: "gemini-3.8-flash",
-      offlineTests: 250,
-      nextWork: "工具返回图片闭环：保留文字、图片、工具ID和错误语义",
+      offlineTests: 252,
+      nextWork: "thinking/signature请求边界：明确支持、拒绝与可信续接规则",
       focusNode: "advanced-boundaries",
     },
     constraints: [
@@ -3195,8 +3197,8 @@ window.MISSION = {
       },
       {
         level: "note",
-        title: "最新离线基线 · 250 项通过",
-        text: "有序输出、流式usage/cache和增量工具参数拒绝已完成并纳入全量回归。250项仅证明离线实现，不代表当前3.8-flash真实CC已验收。",
+        title: "最新离线基线 · 252 项通过",
+        text: "有序输出、流式usage/cache、增量工具参数拒绝及工具结果图片转换已纳入全量回归。252项仅证明离线实现，不代表当前3.8-flash真实CC已验收。",
       },
       {
         level: "note",
@@ -3207,15 +3209,15 @@ window.MISSION = {
     execution: {
       kicker: "CURRENT FOCUS",
       title: "当前只推进一个高级边界",
-      roundLabel: "N3 第一小步",
-      note: "先处理工具返回中的文字+图片闭环，保留工具关联和错误语义；不顺带扩大到音频、视频或文档。",
-      state: "N2三项已经全部收口：内容顺序、usage/cache、partialArgs拒绝。当前进入工具返回图片闭环，之后再处理thinking/signature请求边界。",
+      roundLabel: "N3 第二小步",
+      note: "工具返回文字+图片已完成离线收口；现在只核对thinking/redacted_thinking及签名续轮请求边界。",
+      state: "N2三项和N3工具图片子项已经收口。高级边界父节点仍进行中，下一项是thinking/signature；真实CC工具图片尚未验收。",
       rule: "每个节点分别记录实现、离线证据和真实 CC 结果。离线通过不会自动点亮真实验证节点。",
       cards: [
         {
           owner: "主窗口",
           nodeId: "advanced-boundaries",
-          taskIds: ["tool-result-media"],
+          taskIds: ["thinking-signature-boundary"],
         },
       ],
     },
@@ -3256,11 +3258,11 @@ window.MISSION = {
             live: "历史真实记录保留；当前3.8-flash完整CC矩阵待验。",
             summary: "基础请求和响应转换已经具备；这表示支持范围内的实现完成，不等于所有扩展字段或当前模型端到端完成。",
             goal: ["Messages请求转为GenAI contents/config", "GenAI响应转为Messages JSON或SSE", "保留角色、顺序、工具ID和明确错误边界"],
-            pending: ["扩展工具参数、多模态工具结果和thinking/signature继续按节点收口"],
+            pending: ["thinking/signature继续按高级边界节点收口"],
             verify: ["同步、buffered stream、native stream三路径离线回归"],
             acceptance: ["支持字段不静默丢失或错配", "不支持形态明确拒绝"],
             risks: ["历史模型成功不能自动迁移到3.8-flash"],
-            evidence: ["R1 FinishReason、R2复杂Schema、R4脱敏、R5探针退出码均已有离线修复", "包含在当前250项全量离线基线"],
+            evidence: ["R1 FinishReason、R2复杂Schema、R4脱敏、R5探针退出码均已有离线修复", "包含在当前252项全量离线基线"],
             tags: ["Messages", "GenAI", "text", "multi-turn", "tools"],
             badges: ["基础实现完成", "离线有覆盖", "实测待验"],
             sourceIds: ["text-conversion", "tools", "errors"],
@@ -3305,7 +3307,7 @@ window.MISSION = {
             goal: ["正确映射input/cache/output", "显式0与字段缺失分开处理", "尾片usage覆盖早期累计值"],
             verify: ["专项55项通过", "最终全量离线回归246项通过"],
             acceptance: ["usage不跨chunk求和导致翻倍", "非法负数和cached大于prompt明确失败"],
-            risks: ["本节点246项时的结果及当前250项全量都只是离线回归，不是当前模型真实用量对账"],
+            risks: ["本节点246项时的结果及当前252项全量都只是离线回归，不是当前模型真实用量对账"],
             evidence: ["STEP-077：55项专项 / 0.275s / OK", "STEP-077：246 tests / 2.598s / OK"],
             tags: ["usage", "cache", "streaming", "SSE"],
             badges: ["STEP-077", "246项通过", "离线完成"],
@@ -3349,43 +3351,43 @@ window.MISSION = {
             id: "advanced-boundaries",
             title: "工具图片与 thinking/signature",
             status: "active",
-            progress: "当前焦点 · 先做工具返回图片闭环",
-            implementation: "普通图片输入、签名隔离/TTL和历史安全匹配已有基础；媒体tool_result与请求端thinking块边界仍未完整。",
-            offline: "签名隔离、多图/图片历史已有离线覆盖；扩展形态待补。",
+            progress: "工具图片已完成 · thinking/signature进行中",
+            implementation: "普通图片输入和媒体tool_result已有严格转换；签名隔离/TTL和历史安全匹配已有基础，请求端thinking块边界仍待收口。",
+            offline: "工具结果文字/base64/URL图片、ID/name/is_error及SDK wire已有离线覆盖；thinking/signature扩展形态待补。",
             live: "当前配置下的工具图片与签名连续对话待验。",
             summary: "这里集中处理基础转换之外的高级边界，避免把它们混入已经完成的文本/usage节点。",
             goal: ["工具返回图片可按明确协议处理", "thinking/redacted_thinking与签名只在可信作用域回填", "压缩或ID重用时不误配"],
-            pending: ["实现媒体tool_result的文字+图片转换", "请求端thinking/redacted_thinking边界", "按实际CC会话验证signature续接"],
+            pending: ["请求端thinking/redacted_thinking边界", "按实际CC会话验证signature续接"],
             verify: ["同会话/跨会话、模型、路由隔离", "图片工具结果后的继续回答"],
             acceptance: ["不串签名、不泄露隐藏思维", "图片不会被静默丢弃"],
             risks: ["无真实CC需求证据时不扩展成独立生产网关"],
-            evidence: ["历史R3隔离/TTL和多模态离线矩阵保留在历史区", "当前250项基线未宣称覆盖全部高级形态"],
+            evidence: ["STEP-080：工具结果媒体新增核心3项、相关48项及全量252项通过", "历史R3隔离/TTL和多模态离线矩阵保留在历史区", "当前252项基线未宣称真实工具图片或全部高级形态"],
             tags: ["multimodal", "tool_result", "thinking", "signature"],
-            badges: ["当前焦点", "工具图片待补", "实测待验"],
+            badges: ["工具图片离线完成", "thinking待收口", "实测待验"],
             sourceIds: ["signature", "multimodal"],
             recommended: true,
-            cardSummary: "下一步先完成工具返回图片闭环，再处理thinking/signature。",
+            cardSummary: "工具返回图片已离线完成；当前处理thinking/signature请求边界。",
             workItems: [
               {
                 id: "tool-result-media",
                 title: "工具返回文字与图片闭环",
                 owner: "主窗口",
-                status: "active",
+                status: "done",
                 work: "将Messages tool_result中的文字和图片保真转换为GenAI functionResponse parts，保留工具关联和is_error语义。",
                 acceptance: "文字/图片/MIME/字节/工具ID不错配；未知媒体明确拒绝；专项与全量离线回归通过。",
-                evidence: "尚未实施；当前请求转换会拒绝媒体tool_result。",
+                evidence: "STEP-080：旧实现红测命中；实现后核心3项、相关48项、全量252项通过。未做真实模型验收。",
               },
               {
                 id: "thinking-signature-boundary",
                 title: "thinking/signature请求边界",
-                owner: "待后续",
-                status: "pending",
+                owner: "主窗口",
+                status: "active",
                 work: "在工具图片完成后，核对thinking/redacted_thinking及签名续轮的实际CC需要。",
                 acceptance: "支持范围有回归，不支持内容明确失败；不串签名、不泄露隐藏思维。",
                 evidence: "签名隔离基础已存在；请求端高级块尚未收口。",
               },
             ],
-            completionRule: "工具返回媒体和thinking/signature两个子项分别收口后才完成本节点；当前只推进第一个。",
+            completionRule: "工具返回媒体和thinking/signature两个子项分别收口后才完成本节点；工具媒体已完成，当前只推进第二个。",
           }),
         ],
       },
@@ -3399,9 +3401,9 @@ window.MISSION = {
             id: "offline-regression",
             title: "全量离线回归",
             status: "active",
-            progress: "当前250项通过 · 最终收口后还需重跑",
+            progress: "当前252项通过 · 最终收口后还需重跑",
             implementation: "当前变更已通过统一unittest全量回归。",
-            offline: "250 tests / 3.044s / OK。",
+            offline: "252 tests / 2.958s / OK。",
             live: "离线回归不涉及ModelHub或真实CC。",
             summary: "这是当前代码健康基线，不是最终完成率；后续每个协议修复都必须回归，功能收口后再做最终一次。",
             goal: ["所有既有转换、服务、流式、签名和多模态测试不回退"],
@@ -3409,11 +3411,11 @@ window.MISSION = {
             verify: ["PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -q"],
             acceptance: ["最终支持范围全部通过且无未解释失败"],
             risks: ["Mock/离线SDK对象不能冒充真实模型通过"],
-            evidence: ["STEP-079：最终250项 / 3.044s / OK"],
+            evidence: ["STEP-080：最终252项 / 2.958s / OK"],
             tags: ["unittest", "offline", "regression"],
-            badges: ["250项通过", "当前基线", "非真实验收"],
+            badges: ["252项通过", "当前基线", "非真实验收"],
             sourceIds: ["offline-regression", "regression"],
-            cardSummary: "当前全量250项离线通过；功能收口后仍需最终回归。",
+            cardSummary: "当前全量252项离线通过；功能收口后仍需最终回归。",
           }),
           makeNode({
             id: "real-cc-validation",
@@ -3460,6 +3462,16 @@ window.MISSION = {
     ],
     history: [
       {
+        title: "2026-10-24 · 工具返回图片闭环",
+        scope: "STEP-080 · 离线证据",
+        items: [
+          "旧实现上的混合媒体和SDK wire用例先报错，确认tool_result图片被拒绝。",
+          "文字保留在functionResponse.response，base64/URL图片进入parts；ID/name/is_error不变。",
+          "未知音频等仍明确失败；核心3项、相关48项、最终全量252项通过。",
+          "未调用ModelHub或真实CC；下一步是thinking/signature请求边界。",
+        ],
+      },
+      {
         title: "2026-10-24 · 增量工具参数拒绝",
         scope: "STEP-079 · 离线证据",
         items: [
@@ -3486,6 +3498,8 @@ window.MISSION = {
     localHistorySnapshot: archived.localHistorySnapshot,
   };
 })();
+
+
 const mission = window.MISSION;
 
 const phases = mission.phases;
