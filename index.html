@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Claude Code Messages 与 Google GenAI 的本地协议适配、验证和交付进度。" />
+  <title>CC × GenAI 本地适配进度</title>
+  <link rel="stylesheet" href="./styles.css?v=local-only-usage-20261024" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">CG</span><div><p class="eyebrow">PROJECT ROADMAP · 2026</p><h1>CC × GenAI 适配路线图</h1></div></div>
+    <div class="top-actions"><button class="ghost-button" id="resetButton" type="button">清除个人标记</button><button class="primary-button" id="nextButton" type="button">定位待收口节点</button></div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="overview-title">
+      <div class="hero-copy">
+        <p class="kicker">CLAUDE CODE × GOOGLE GENAI</p>
+        <h2 id="overview-title">本地适配，<br>真实验证，再交付。</h2>
+        <p class="hero-description">Claude Code Anthropic Messages ↔ Google GenAI 协议适配。当前开发模型为 <strong id="currentModel">gemini-3.8-flash</strong>，兼容目标为 Gemini 系列；不同型号按各自 ModelCard 与能力分别验证。</p>
+        <p class="scope-note">实现、离线测试、当前模型真实验证分开记录。当前只做本地交付，不合入 evals、不上 Merlin；节点点亮只表示其写明的范围达标。</p>
+        <div class="legend" aria-label="状态说明"><span><i class="dot done"></i>节点范围已完成</span><span><i class="dot active"></i>部分完成 / 进行中</span><span><i class="dot blocked"></i>验证阻塞</span><span><i class="dot pending"></i>待处理</span></div>
+      </div>
+      <div class="progress-card">
+        <div class="progress-head"><span>当前阶段</span><strong class="current-phase">协议正确性收口</strong></div>
+        <p class="next-work">派工状态：<strong id="nextWork">第二轮：签名历史 · 流式结束 · 多模态回归</strong></p>
+        <div class="progress-stats">
+          <div><strong id="offlineCount">140 项</strong><span>当前离线回归 · 非线上验收</span></div>
+          <div><strong id="totalCount">9</strong><span>当前本地主线节点</span></div>
+          <div><strong id="activeCount">3</strong><span>部分完成 / 进行中</span></div>
+          <div><strong>待执行</strong><span>当前3.8真实CC验收</span></div>
+        </div>
+      </div>
+    </section>
+    <nav class="delivery-flow" aria-label="交付顺序"><a href="#local-foundation">01 基础适配与配置</a><span>→</span><a href="#protocol-closeout">02 协议正确性收口</a><span>→</span><a href="#local-validation-delivery">03 本地验证与交付</a></nav>
+    <section class="execution" id="execution" aria-labelledby="execution-title"></section>
+    <section class="notices" id="constraints" aria-label="当前阻塞与开发重点"></section>
+    <section class="toolbar" aria-label="任务筛选">
+      <div class="filters" id="filters"><button class="filter active" data-filter="all" type="button">全部</button><button class="filter" data-filter="active" type="button">进行中</button><button class="filter" data-filter="done" type="button">节点范围完成</button><button class="filter" data-filter="pending" type="button">待处理</button><button class="filter" data-filter="blocked" type="button">验证阻塞</button></div>
+      <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="搜索节点、协议或验证项" /></label>
+    </section>
+    <section class="workspace">
+      <div class="roadmap" id="roadmap" aria-label="三阶段本地任务节点"></div>
+      <aside class="detail-panel" id="detailPanel" aria-live="polite"></aside>
+    </section>
+    <section class="history-section" id="history" aria-labelledby="history-title">
+      <p class="kicker">EVIDENCE, NOT ACCEPTANCE RATE</p><h2 id="history-title">历史验证与迁移记录</h2>
+      <p class="hero-description">成功、失败和更正都保留。旧模型成功不自动迁移到当前模型，离线通过不替代真实任务验收。</p>
+      <div class="history-grid" id="historySummary"></div>
+      <details class="legacy-archive"><summary>展开旧版 29 节点完整快照</summary><p class="archive-warning">归档保留迁移前原文、状态和证据。文中“当前”“待验证”指当时语境，可能已被后续记录更正；不作为本版实际进度。</p><p id="legacyMarksNote"></p><div id="legacyArchive"></div></details>
+    </section>
+  </main>
+  <footer><span>项目事实随发布更新 · 个人标记仅当前浏览器保存，不覆盖事实</span><span>最后更新：2026-10-24 · 仅静态进展，不含适配器源码、内部日志或凭据</span></footer>
+  <script src="./app.js?v=local-only-usage-20261024"></script>
+</body>
+</html>
